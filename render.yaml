@@ -1,0 +1,10 @@
+services:
+  - type: web
+    name: mithya-api
+    env: docker
+    dockerfilePath: ./Dockerfile
+    plan: free
+    healthCheckPath: /api/search
+    envVars:
+      - key: MONGO_URI
+        sync: false
