@@ -1,5 +1,5 @@
-# Use the official Microsoft Playwright image because it has all browser dependencies pre-installed!
-FROM mcr.microsoft.com/playwright/python:v1.42.0-jammy
+# Use the official Microsoft Playwright image (focal) to ensure Python 3.10 is used
+FROM mcr.microsoft.com/playwright/python:v1.38.0-focal
 
 # Set the working directory
 WORKDIR /app
