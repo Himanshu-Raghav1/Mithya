@@ -211,4 +211,4 @@ while True:
         time.sleep(180) 
     else:
         print("🌙 Night Mode Active. Sleeping for 2 hours...")
-        time.sleep(7200)
+        time.sleep(1200)
