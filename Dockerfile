@@ -11,7 +11,6 @@ RUN pip install --no-cache-dir -r requirements.txt
 # Copy the rest of the backend files
 COPY app.py .
 COPY workers.py .
-COPY test.py .
 COPY start.sh .
 
 # Make the start script executable
