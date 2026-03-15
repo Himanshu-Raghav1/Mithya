@@ -12,7 +12,7 @@ import ImportantContacts from './features/ImportantContacts';
 import LostFound from './features/LostFound';
 import PYQsNotes from './features/PYQsNotes';
 
-import type { TabId, ForumPost } from './types';
+import type { TabId } from './types';
 
 export default function App() {
   const [showWelcome, setShowWelcome] = useState(true);
