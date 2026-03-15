@@ -4,8 +4,12 @@ FROM mcr.microsoft.com/playwright/python:v1.42.0-jammy
 # Set the working directory
 WORKDIR /app
 
+# Install C++ build dependencies required for compiling greenlet from source
+RUN apt-get update && apt-get install -y build-essential python3-dev gcc g++
+
 # Copy requirement list and install dependencies
 COPY requirements.txt .
+RUN pip install --no-cache-dir --upgrade pip setuptools wheel
 RUN pip install --no-cache-dir -r requirements.txt
 
 # Copy the rest of the backend files
