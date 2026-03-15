@@ -124,14 +124,25 @@ export default function LiveSportsSlots() {
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          className="glass-card p-6 text-center"
-          style={{ background: 'rgba(229,57,53,0.12)', border: '1px solid rgba(229,57,53,0.3)' }}
+          className="glass-card p-6 text-center shadow-lg"
+          style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)' }}
         >
-          <WifiOff className="w-12 h-12 text-red-300 mx-auto mb-3" />
+          <WifiOff className="w-12 h-12 text-white/50 mx-auto mb-3" />
           <p className="text-white font-bold text-lg">{message}</p>
-          <p className="text-white/40 text-xs mt-2">
-            Make sure <code className="bg-white/10 px-1 rounded">python app.py</code> is running on port 5000.
+          <p className="text-white/60 text-sm mt-2 mb-5">
+            You might still find slots directly on the official portal.
           </p>
+          
+          <a
+            href="https://sports.mitwpu.edu.in/login"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex items-center justify-center gap-2 px-6 py-3 rounded-xl font-black text-white transition-all hover:scale-105 active:scale-95 shadow-lg shadow-white/5"
+            style={{ background: 'linear-gradient(135deg, #FF6B6B, #E53935)' }}
+          >
+            <span>Check Official Website</span>
+            <ExternalLink className="w-5 h-5" />
+          </a>
         </motion.div>
       )}
 
