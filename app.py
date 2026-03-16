@@ -22,13 +22,22 @@ voice_collection = db['mithya_voice']
 # ==========================================
 @app.route('/api/search', methods=['GET'])
 def search_game():
+    # Get the game the student typed in (e.g., "?game=chess")
     game_query = request.args.get('game', '').lower()
+    
     if not game_query:
         return jsonify({"success": False, "message": "Please enter a game name."})
 
+    print(f"🔍 Someone searched for: {game_query}")
+
+    # Search MongoDB for any game that contains the search word
+    # The "$regex" makes it a smart search (so "ches" will match "Chess Board")
     query = {"game_name": {"$regex": game_query, "$options": "i"}}
+    
+    # Fetch the results, but hide the ugly MongoDB '_id' field
     results = list(slots_collection.find(query, {"_id": 0}))
 
+    # Send the data back to the student's browser!
     if results:
         return jsonify({"success": True, "data": results})
     else:
@@ -124,8 +133,12 @@ def interact_post(post_id, action):
     except Exception as e:
         return jsonify({"success": False, "message": str(e)})
 
+import os # Add this at the top of your file
+
 if __name__ == '__main__':
     print("==========================================")
     print("   🚀 MITHYA API SERVER IS LIVE! ")
     print("==========================================")
-    app.run(host="0.0.0.0", port=5000, debug=True)
+    # Render provides a PORT environment variable. If not found, it defaults to 5000.
+    port = int(os.environ.get("PORT", 5000))
+    app.run(host="0.0.0.0", port=port, debug=False)
