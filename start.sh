@@ -1,6 +1,6 @@
 #!/bin/bash
 # Start the background worker (Playwright scraper) in the background
-python workers.py &
+python -u workers.py &
 
 # Start the Flask API server using gunicorn in the foreground
 # Azure sets the PORT environment variable (usually 80 or 8080)
