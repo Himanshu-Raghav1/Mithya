@@ -121,6 +121,7 @@ export default function WelcomeFlow({ onComplete }: WelcomeFlowProps) {
                 src="/logo.png"
                 alt="Mithya"
                 className="w-16 h-16 rounded-full object-cover shadow-lg ring-2 ring-white/30"
+                onError={(e) => { e.currentTarget.style.display = 'none'; }}
               />
             </div>
 
@@ -165,7 +166,7 @@ export default function WelcomeFlow({ onComplete }: WelcomeFlowProps) {
 
             {/* Mithya branding */}
             <div className="flex items-center justify-center gap-2 mt-4">
-              <img src="/logo.png" alt="Mithya" className="w-8 h-8 rounded-full object-cover" />
+              <img src="/logo.png" alt="Mithya" className="w-8 h-8 rounded-full object-cover" onError={(e) => { e.currentTarget.style.display = 'none'; }} />
               <span className="text-white font-black text-lg tracking-widest" style={{ letterSpacing: '0.15em' }}>MITHYA</span>
             </div>
             <h2 className="text-2xl font-black text-white mt-3 drop-shadow-md leading-snug">
