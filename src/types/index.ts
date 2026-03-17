@@ -43,6 +43,7 @@ export interface ForumPost {
   dislikedByMe: boolean;
   comments: Comment[];
   reported: boolean;
+  image_url?: string;
 }
 
 /** An upcoming event card */
@@ -55,6 +56,7 @@ export interface EventItem {
   organizer: string;
   icon: string;
   url?: string;
+  image_url?: string;
 }
 
 export type EventTag =
@@ -88,4 +90,17 @@ export type TabId =
   | 'quicklinks'
   | 'contacts'
   | 'lostfound'
-  | 'pyqs';
+  | 'pyqs'
+  | 'admin';
+
+/** A Lost & Found item */
+export interface LostItem {
+  id: string;
+  item_name: string;
+  description: string;
+  contact_name: string;
+  phone_number: string;
+  type: 'Lost' | 'Found';
+  image_url?: string;
+  timestamp: string;
+}

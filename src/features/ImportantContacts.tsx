@@ -1,9 +1,8 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { Phone, Mail, Copy, Check } from 'lucide-react';
+import { Phone, Mail, Copy, Check, Loader2 } from 'lucide-react';
 import type { Contact, ContactCategory } from '../types';
-
-const CONTACTS: Contact[] = [];
+import { getContacts } from '../services/api';
 
 const CATEGORY_STYLE: Record<ContactCategory, { bg: string; text: string; border: string; emoji: string }> = {
   Dean:      { bg: 'rgba(255,215,64,0.15)',  text: '#FFD740', border: 'rgba(255,215,64,0.3)',  emoji: '👑' },
@@ -16,7 +15,7 @@ const CATEGORIES: ContactCategory[] = ['Emergency', 'Dean', 'Faculty', 'Admin'];
 
 function ContactCard({ contact }: { contact: Contact }) {
   const [copied, setCopied] = useState<'email' | 'phone' | null>(null);
-  const style = CATEGORY_STYLE[contact.category];
+  const style = CATEGORY_STYLE[contact.category] || CATEGORY_STYLE['Faculty'];
 
   const copyToClipboard = async (text: string, type: 'email' | 'phone') => {
     try {
@@ -77,13 +76,26 @@ function ContactCard({ contact }: { contact: Contact }) {
 
 export default function ImportantContacts() {
   const [activeFilter, setActiveFilter] = useState<ContactCategory | 'All'>('All');
+  const [contacts, setContacts] = useState<Contact[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    async function loadData() {
+      const res = await getContacts();
+      if (res.success && res.data) {
+        setContacts(res.data);
+      }
+      setIsLoading(false);
+    }
+    loadData();
+  }, []);
 
   const filtered = activeFilter === 'All'
-    ? CONTACTS
-    : CONTACTS.filter(c => c.category === activeFilter);
+    ? contacts
+    : contacts.filter(c => c.category === activeFilter);
 
   return (
-    <div className="p-4 space-y-4">
+    <div className="p-4 space-y-4 max-w-4xl mx-auto pb-24">
       {/* Header */}
       <div className="glass-card p-4" style={{ background: 'rgba(0,168,232,0.12)' }}>
         <div className="flex items-center gap-3">
@@ -109,17 +121,25 @@ export default function ImportantContacts() {
               border: `1px solid ${activeFilter === cat ? 'rgba(0,168,232,0.5)' : 'rgba(255,255,255,0.1)'}`,
             }}
           >
-            {cat === 'All' ? '🌐 All' : `${CATEGORY_STYLE[cat].emoji} ${cat}`}
+            {cat === 'All' ? '🌐 All' : (CATEGORY_STYLE[cat as ContactCategory] ? `${CATEGORY_STYLE[cat as ContactCategory].emoji} ${cat}` : cat)}
           </motion.button>
         ))}
       </div>
 
       {/* Contact grid */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-        {filtered.map(contact => (
-          <ContactCard key={contact.id} contact={contact} />
-        ))}
-      </div>
+      {isLoading ? (
+        <div className="flex justify-center items-center py-12">
+          <Loader2 className="w-8 h-8 animate-spin text-blue-400" />
+        </div>
+      ) : filtered.length === 0 ? (
+        <p className="text-center text-white/50 py-12 font-bold">No contacts directory published yet.</p>
+      ) : (
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          {filtered.map(contact => (
+            <ContactCard key={contact.id} contact={contact} />
+          ))}
+        </div>
+      )}
     </div>
   );
 }

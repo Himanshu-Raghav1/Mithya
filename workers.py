@@ -205,7 +205,7 @@ while True:
     if current_token:
         scrape_and_update_db(current_token)
     
-    if 5 <= now.hour < 18:
+    if 4 <= now.hour < 18:
         print(f"⏳ Sleeping for 3 minutes... (Next run: {(datetime.now(IST).timestamp() + 180)})")
         time.sleep(180) 
     else:

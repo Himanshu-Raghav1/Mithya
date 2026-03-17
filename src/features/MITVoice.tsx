@@ -1,8 +1,9 @@
-import { useState, useEffect } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Send, ThumbsUp, ThumbsDown, MessageCircle, Flag, ChevronDown, Loader2 } from 'lucide-react';
+import { Send, ThumbsUp, ThumbsDown, MessageCircle, Flag, ChevronDown, Loader2, Image as ImageIcon, X } from 'lucide-react';
 import type { ForumPost, Comment } from '../types';
 import { getForumPosts, createForumPost, addComment, interactWithPost } from '../services/api';
+import { uploadToCloudinary } from '../services/cloudinary';
 
 // Nobita SVG for banner
 function NobitaMini() {
@@ -51,6 +52,12 @@ export default function MITVoice() {
   const [expandedComments, setExpandedComments] = useState<Set<string>>(new Set());
   const [commentInputs, setCommentInputs] = useState<Record<string, string>>({});
   
+  // Image Upload State
+  const [selectedImage, setSelectedImage] = useState<File | null>(null);
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const [isUploading, setIsUploading] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  
   const myAnonId = getAnonymousId();
 
   // Load from MongoDB
@@ -66,12 +73,47 @@ export default function MITVoice() {
     loadPosts();
   }, []);
 
+  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files[0]) {
+      const file = e.target.files[0];
+      if (file.size > 5 * 1024 * 1024) {
+        alert("Image must be smaller than 5MB");
+        return;
+      }
+      setSelectedImage(file);
+      setPreviewUrl(URL.createObjectURL(file));
+    }
+  };
+
+  const clearImage = () => {
+    setSelectedImage(null);
+    setPreviewUrl(null);
+    if (fileInputRef.current) fileInputRef.current.value = '';
+  };
+
   const handleShare = async () => {
-    if (!newText.trim()) return;
-    const res = await createForumPost(newText.trim(), myAnonId);
-    if (res.success) {
-      setNewText('');
-      loadPosts(); // refresh feed
+    if (!newText.trim() && !selectedImage) return;
+    
+    setIsUploading(true);
+    let uploadedUrl = undefined;
+    
+    try {
+      if (selectedImage) {
+        uploadedUrl = await uploadToCloudinary(selectedImage);
+      }
+      
+      const res = await createForumPost(newText.trim(), myAnonId, uploadedUrl);
+      if (res.success) {
+        setNewText('');
+        clearImage();
+        loadPosts(); // refresh feed
+      } else {
+        alert("Failed to post: " + res.message);
+      }
+    } catch (err: any) {
+      alert("Error: " + err.message);
+    } finally {
+      setIsUploading(false);
     }
   };
 
@@ -157,20 +199,53 @@ export default function MITVoice() {
           className="w-full p-3 rounded-xl text-white placeholder-white/30 font-medium resize-none outline-none text-sm"
           style={{ background: 'rgba(255,255,255,0.08)', border: '1.5px solid rgba(255,255,255,0.15)' }}
         />
-        <div className="flex justify-between items-center">
-          <span className="text-white/40 text-xs">Posted as: <span className="text-blue-300 font-bold">{myAnonId}</span></span>
+        <div className="flex justify-between items-center pt-2">
+          <div className="flex items-center gap-3">
+            <span className="text-white/40 text-xs">Posted as: <span className="text-blue-300 font-bold">{myAnonId}</span></span>
+            
+            {/* Image Upload Button */}
+            <div>
+              <input 
+                type="file" ref={fileInputRef} onChange={handleImageChange}
+                accept="image/*" className="hidden"
+              />
+              <button 
+                onClick={() => fileInputRef.current?.click()}
+                className="text-white/40 hover:text-doraSky transition-colors p-1"
+                title="Attach an image"
+                disabled={isUploading}
+              >
+                <ImageIcon className="w-5 h-5" />
+              </button>
+            </div>
+          </div>
+          
           <motion.button
             whileHover={{ scale: 1.05 }}
             whileTap={{ scale: 0.95 }}
             onClick={handleShare}
-            disabled={!newText.trim()}
+            disabled={(!newText.trim() && !selectedImage) || isUploading}
             className="px-4 py-2 rounded-xl font-black text-white text-sm flex items-center gap-2 cursor-pointer disabled:opacity-40"
             style={{ background: 'linear-gradient(135deg, #00A8E8, #0077B6)' }}
           >
-            <Send className="w-4 h-4" />
-            Share
+             {isUploading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
+            {isUploading ? 'Sending...' : 'Share'}
           </motion.button>
         </div>
+        
+        {/* Preview of attached image */}
+        {previewUrl && (
+          <div className="relative inline-block mt-2">
+            <img src={previewUrl} alt="Preview" className="h-24 rounded border border-white/20 object-cover" />
+            <button 
+              onClick={clearImage}
+              disabled={isUploading}
+              className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-1 shadow-lg hover:scale-110 transition-transform"
+            >
+              <X className="w-3 h-3" />
+            </button>
+          </div>
+        )}
       </div>
 
       {/* Loading state */}
@@ -219,7 +294,16 @@ export default function MITVoice() {
               </div>
 
               {/* Post text */}
-              <p className="text-white/90 text-sm leading-relaxed whitespace-pre-wrap">{post.text}</p>
+              {post.text && (
+                <p className="text-white/90 text-sm leading-relaxed whitespace-pre-wrap">{post.text}</p>
+              )}
+
+              {/* Attached Image */}
+              {post.image_url && (
+                <div className="mt-2 rounded-xl overflow-hidden border border-white/10">
+                  <img src={post.image_url} alt="Attached to post" className="w-full h-auto max-h-96 object-contain bg-black/50" loading="lazy" />
+                </div>
+              )}
 
               {/* Actions */}
               <div className="flex items-center gap-1 pt-1 border-t border-white/10">

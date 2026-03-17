@@ -14,6 +14,7 @@ const tabs: { id: TabId; label: string; emoji: string }[] = [
   { id: 'contacts', label: 'Contacts', emoji: '📞' },
   { id: 'lostfound', label: 'Lost & Found', emoji: '🔍' },
   { id: 'pyqs', label: 'PYQs & Notes', emoji: '📚' },
+  { id: 'admin', label: 'Admin Portal', emoji: '🔒' }
 ];
 
 export default function Navbar({ activeTab, onTabChange }: NavbarProps) {
