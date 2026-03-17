@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion } from 'framer-motion';
 import { BookOpen, Upload, Loader2, Link as LinkIcon, Download } from 'lucide-react';
 import { getPyqs, submitPyq } from '../services/api';
 import { uploadToCloudinary } from '../services/cloudinary';
@@ -35,7 +35,7 @@ function DoraemonReading() {
 
 export default function PYQsNotes() {
   const [activeTab, setActiveTab] = useState<'feed' | 'upload'>('feed');
-  
+
   // Data
   const [notes, setNotes] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -45,7 +45,7 @@ export default function PYQsNotes() {
   const [subject, setSubject] = useState('');
   const [author, setAuthor] = useState('');
   const [linkUrl, setLinkUrl] = useState('');
-  
+
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [isUploading, setIsUploading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -89,7 +89,7 @@ export default function PYQsNotes() {
       const res = await submitPyq({
         title, subject, author, file_url: finalUrl
       });
-      
+
       if (res.success) {
         alert("Success! Your note has been submitted to the Admin for approval.");
         setTitle(''); setSubject(''); setAuthor(''); setLinkUrl(''); setSelectedFile(null);
@@ -123,19 +123,19 @@ export default function PYQsNotes() {
 
       {/* TABS */}
       <div className="flex bg-black/40 p-1.5 rounded-2xl border border-white/10 relative overflow-hidden">
-        <button 
-          onClick={() => setActiveTab('feed')} 
+        <button
+          onClick={() => setActiveTab('feed')}
           className={`flex-1 py-2 rounded-xl text-sm font-bold z-10 transition-colors ${activeTab === 'feed' ? 'text-white' : 'text-white/50 hover:text-white/80'}`}
         >
           All Notes
         </button>
-        <button 
-          onClick={() => setActiveTab('upload')} 
+        <button
+          onClick={() => setActiveTab('upload')}
           className={`flex-1 py-2 rounded-xl text-sm font-bold z-10 transition-colors ${activeTab === 'upload' ? 'text-white' : 'text-white/50 hover:text-white/80'}`}
         >
           Upload
         </button>
-        
+
         {/* Animated Active Background */}
         <motion.div
           className="absolute top-1.5 bottom-1.5 w-[calc(50%-4px)] flex-1 rounded-xl z-0"
@@ -147,7 +147,7 @@ export default function PYQsNotes() {
 
       {/* --- FEED TAB --- */}
       {activeTab === 'feed' && (
-        <motion.div initial={{opacity:0}} animate={{opacity:1}}>
+        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
           {isLoading ? (
             <div className="text-center py-12">
               <Loader2 className="w-10 h-10 text-yellow-500 animate-spin mx-auto mb-3" />
@@ -171,7 +171,7 @@ export default function PYQsNotes() {
                   <div className="flex items-center justify-between mt-auto">
                     <span className="text-xs text-white/50">By: <span className="font-bold text-yellow-400">{note.author} 🌟</span></span>
                     <a href={note.file_url} target="_blank" rel="noreferrer" className="p-2 bg-white/10 hover:bg-white/20 text-white rounded-lg transition-colors">
-                       <Download className="w-4 h-4" />
+                      <Download className="w-4 h-4" />
                     </a>
                   </div>
                 </div>
@@ -183,47 +183,47 @@ export default function PYQsNotes() {
 
       {/* --- UPLOAD TAB --- */}
       {activeTab === 'upload' && (
-        <motion.div initial={{opacity:0, y:20}} animate={{opacity:1, y:0}} className="glass-card p-6 border border-white/10">
+        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="glass-card p-6 border border-white/10">
           <form onSubmit={handleSubmitNote} className="space-y-4">
             <h3 className="text-lg font-black text-white mb-2 flex items-center gap-2">
               <Upload className="w-5 h-5 text-yellow-400" /> Share your Notes
             </h3>
-            
+
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="sm:col-span-2">
                 <label className="text-xs font-bold text-white/60 ml-1">Document Title</label>
-                <input required value={title} onChange={e=>setTitle(e.target.value)} type="text" className="w-full mt-1 bg-black/30 border border-white/10 rounded-xl px-4 py-3 text-white outline-none focus:border-doraSky" placeholder="e.g. EndSem CS 2025 PYQ" />
+                <input required value={title} onChange={e => setTitle(e.target.value)} type="text" className="w-full mt-1 bg-black/30 border border-white/10 rounded-xl px-4 py-3 text-white outline-none focus:border-doraSky" placeholder="e.g. EndSem CS 2025 PYQ" />
               </div>
               <div>
                 <label className="text-xs font-bold text-white/60 ml-1">Subject / Course</label>
-                <input required value={subject} onChange={e=>setSubject(e.target.value)} type="text" className="w-full mt-1 bg-black/30 border border-white/10 rounded-xl px-4 py-3 text-white outline-none focus:border-doraSky" placeholder="e.g. Data Structures" />
+                <input required value={subject} onChange={e => setSubject(e.target.value)} type="text" className="w-full mt-1 bg-black/30 border border-white/10 rounded-xl px-4 py-3 text-white outline-none focus:border-doraSky" placeholder="e.g. Data Structures" />
               </div>
               <div>
                 <label className="text-xs font-bold text-white/60 ml-1">Your Name (Optional)</label>
-                <input value={author} onChange={e=>setAuthor(e.target.value)} type="text" className="w-full mt-1 bg-black/30 border border-white/10 rounded-xl px-4 py-3 text-white outline-none focus:border-doraSky" placeholder="To get your Student Star 🌟" />
+                <input value={author} onChange={e => setAuthor(e.target.value)} type="text" className="w-full mt-1 bg-black/30 border border-white/10 rounded-xl px-4 py-3 text-white outline-none focus:border-doraSky" placeholder="To get your Student Star 🌟" />
               </div>
             </div>
 
             <div className="pt-4 border-t border-white/10 space-y-4">
               <p className="text-sm font-bold text-white/80">Attachment Method:</p>
-              
+
               {/* Option 1: Drive Link */}
               <div>
-                <label className="text-xs font-bold text-blue-300 ml-1 flex items-center gap-1"><LinkIcon className="w-3 h-3"/> Method 1: Google Drive Link</label>
-                <input value={linkUrl} onChange={e=>setLinkUrl(e.target.value)} disabled={!!selectedFile} type="url" className="w-full mt-1 bg-black/30 border border-white/10 rounded-xl px-4 py-3 text-white disabled:opacity-30 outline-none focus:border-doraSky" placeholder="Make sure the link is 'Anyone with link can view'" />
+                <label className="text-xs font-bold text-blue-300 ml-1 flex items-center gap-1"><LinkIcon className="w-3 h-3" /> Method 1: Google Drive Link</label>
+                <input value={linkUrl} onChange={e => setLinkUrl(e.target.value)} disabled={!!selectedFile} type="url" className="w-full mt-1 bg-black/30 border border-white/10 rounded-xl px-4 py-3 text-white disabled:opacity-30 outline-none focus:border-doraSky" placeholder="Make sure the link is 'Anyone with link can view'" />
               </div>
 
               <div className="text-center text-xs font-black text-white/30 uppercase tracking-widest">- OR -</div>
 
               {/* Option 2: Cloudinary Direct PDF */}
               <div>
-                <label className="text-xs font-bold text-yellow-400 ml-1 flex items-center gap-1"><Upload className="w-3 h-3"/> Method 2: Direct Upload</label>
+                <label className="text-xs font-bold text-yellow-400 ml-1 flex items-center gap-1"><Upload className="w-3 h-3" /> Method 2: Direct Upload</label>
                 <div className="mt-1 relative group cursor-pointer" onClick={() => !linkUrl && fileInputRef.current?.click()}>
                   <div className={`w-full border-2 border-dashed rounded-xl p-4 text-center transition-colors ${linkUrl ? 'border-white/10 opacity-30 select-none' : 'border-white/30 hover:border-yellow-400 bg-white/5'}`}>
                     {selectedFile ? (
                       <p className="text-sm font-bold text-white p-2">{selectedFile.name}</p>
                     ) : (
-                       <p className="text-sm text-white/50">Click to select PDF or Image</p>
+                      <p className="text-sm text-white/50">Click to select PDF or Image</p>
                     )}
                   </div>
                   <input type="file" ref={fileInputRef} onChange={handleFileSelection} disabled={!!linkUrl} className="hidden" accept=".pdf,image/*" />
