@@ -167,9 +167,18 @@ export async function createEvent(payload: Partial<import('../types').EventItem>
 // 📚 PYQs & NOTES + ADMIN (MONGODB API)
 // ==========================================
 
-export async function getPyqs(): Promise<ApiResponse<any[]>> {
+export async function getPyqs(
+  program?: string,
+  semester?: string,
+  search?: string
+): Promise<ApiResponse<any[]>> {
   try {
-    const res = await fetch(`${API_BASE_URL}/api/pyqs`);
+    const params = new URLSearchParams();
+    if (program && program !== 'All') params.append('program', program);
+    if (semester && semester !== 'All') params.append('semester', semester);
+    if (search && search.trim()) params.append('search', search.trim());
+    const query = params.toString() ? `?${params.toString()}` : '';
+    const res = await fetch(`${API_BASE_URL}/api/pyqs${query}`);
     return await res.json() as ApiResponse<any[]>;
   } catch {
     return { success: false, message: 'Failed to fetch notes' };

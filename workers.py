@@ -47,11 +47,11 @@ def get_fresh_token():
     print(f"\n[{datetime.now(IST).strftime('%I:%M %p')}] 👻 Getting a fresh authentication token...")
     
     with sync_playwright() as p:
-        # FIX 1: Headless MUST be True on a server!
-        browser = p.chromium.launch(headless=True) 
+        browser = p.chromium.launch(headless=True)
         context = browser.new_context()
         page = context.new_page()
         
+        auth_token = None
         try:
             page.goto(LOGIN_URL)
             page.fill("input[type='email']", EMAIL)
@@ -60,8 +60,6 @@ def get_fresh_token():
             
             page.wait_for_load_state("networkidle")
             page.wait_for_timeout(3000)
-            
-            auth_token = None
             
             # ATTEMPT 1: Check Cookies
             for cookie in context.cookies():
@@ -79,18 +77,18 @@ def get_fresh_token():
                         auth_token = json.loads(value).get("access_token")
                         break
 
-            browser.close()
-            if auth_token:
-                print("✅ Token acquired successfully!")
-                return auth_token
-            else:
-                print("❌ Failed to find token anywhere.")
-                return None
-                
         except Exception as e:
             print(f"Browser failed: {e}")
+        finally:
+            # CRITICAL FIX: Always close context THEN browser to fully release Chromium RAM
+            context.close()
             browser.close()
-            return None
+
+        if auth_token:
+            print("✅ Token acquired successfully!")
+        else:
+            print("❌ Failed to find token anywhere.")
+        return auth_token
 
 
 # ==========================================

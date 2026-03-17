@@ -232,8 +232,23 @@ def create_event():
 @app.route('/api/pyqs', methods=['GET'])
 def get_pyqs():
     try:
-        # ONLY return notes that the admin has approved
-        approved_notes = list(pyqs_collection.find({"is_approved": True}, {"_id": 0}).sort("timestamp", -1))
+        query = {"is_approved": True}
+        program = request.args.get('program')
+        semester = request.args.get('semester')
+        search = request.args.get('search', '').strip()
+
+        if program and program != 'All':
+            query['program'] = program
+        if semester and semester != 'All':
+            query['semester'] = semester
+        if search:
+            query['$or'] = [
+                {'title': {'$regex': search, '$options': 'i'}},
+                {'subject': {'$regex': search, '$options': 'i'}},
+                {'author': {'$regex': search, '$options': 'i'}},
+            ]
+
+        approved_notes = list(pyqs_collection.find(query, {"_id": 0}).sort("timestamp", -1))
         return jsonify({"success": True, "data": approved_notes})
     except Exception as e:
         return jsonify({"success": False, "message": str(e)})
@@ -250,8 +265,10 @@ def submit_pyq():
             "title": data.get('title').strip(),
             "subject": data.get('subject').strip(),
             "author": data.get('author', 'Anonymous Student').strip(),
-            "file_url": data.get('file_url', '').strip(), # Drive link or Cloudinary PDF
-            "is_approved": False, # ALWAYS false initially! Requires Admin action.
+            "file_url": data.get('file_url', '').strip(),
+            "program": data.get('program', 'BTech').strip(),
+            "semester": data.get('semester', '1').strip(),
+            "is_approved": False,
             "timestamp": datetime.now().isoformat()
         }
         

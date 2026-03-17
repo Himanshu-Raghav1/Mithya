@@ -31,7 +31,12 @@ export default function Navbar({ activeTab, onTabChange }: NavbarProps) {
       {/* Title bar */}
       <div className="flex items-center justify-between px-4 py-3">
         <div className="flex items-center gap-2">
-          <span className="text-2xl">🌀</span>
+          <img
+            src="/logo.png"
+            alt="Mithya Logo"
+            className="w-9 h-9 rounded-full object-cover"
+            onError={(e) => { e.currentTarget.style.display='none'; }}
+          />
           <h1
             className="text-2xl font-black tracking-widest"
             style={{

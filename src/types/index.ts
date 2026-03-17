@@ -82,6 +82,9 @@ export interface Contact {
 
 export type ContactCategory = 'Dean' | 'Faculty' | 'Emergency' | 'Admin';
 
+/** Degree programs offered */
+export type ProgramType = 'BTech' | 'BCA' | 'BBA' | 'BA' | 'B.com' | 'BSc' | 'B.des';
+
 /** Active navigation tab IDs */
 export type TabId =
   | 'sports'
@@ -92,6 +95,19 @@ export type TabId =
   | 'lostfound'
   | 'pyqs'
   | 'admin';
+
+/** A PYQ / Note submission */
+export interface PyqNote {
+  id: string;
+  title: string;
+  subject: string;
+  author: string;
+  file_url: string;
+  program: ProgramType;
+  semester: string;
+  is_approved: boolean;
+  timestamp: string;
+}
 
 /** A Lost & Found item */
 export interface LostItem {
