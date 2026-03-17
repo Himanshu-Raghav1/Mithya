@@ -30,7 +30,17 @@ ADMIN_PASSWORD = os.environ.get("ADMIN_PASSWORD", "mithya_admin_123")
 # ==========================================
 @app.route('/api/search', methods=['GET'])
 def search_game():
-    # Get the game the student typed in (e.g., "?game=chess")
+    from datetime import timezone, timedelta
+    IST = timezone(timedelta(hours=5, minutes=30))
+    current_hour = datetime.now(IST).hour
+
+    # 🌙 Night-time: scraper is offline between 6 PM and 4 AM IST
+    if not (4 <= current_hour < 18):
+        return jsonify({
+            "success": False,
+            "message": "🌙 Slot checking service is offline between 6 PM – 4 AM IST. Check back in the morning!"
+        })
+
     game_query = request.args.get('game', '').lower()
     
     if not game_query:
@@ -38,14 +48,9 @@ def search_game():
 
     print(f"🔍 Someone searched for: {game_query}")
 
-    # Search MongoDB for any game that contains the search word
-    # The "$regex" makes it a smart search (so "ches" will match "Chess Board")
     query = {"game_name": {"$regex": game_query, "$options": "i"}}
-    
-    # Fetch the results, but hide the ugly MongoDB '_id' field
     results = list(slots_collection.find(query, {"_id": 0}))
 
-    # Send the data back to the student's browser!
     if results:
         return jsonify({"success": True, "data": results})
     else:

@@ -184,29 +184,25 @@ def scrape_and_update_db(token):
 
 
 # ==========================================
-# 🕒 THE MASTER TIME LOOP
+# 🚀 SINGLE-RUN ENTRY POINT
 # ==========================================
+# This script is designed to run ONCE and exit.
+# Render's Cron Job service re-runs it on schedule (every 3 minutes).
 print("==========================================")
-print("     🏅 MITHYA BACKGROUND WORKER RUNNING  ")
+print("   🏅 MITHYA SPORTS WORKER STARTING      ")
 print("==========================================")
 
-current_token = None
-token_timestamp = None
+# ⏰ Night-time guard: Don't scrape between 6 PM and 4 AM IST (saves Render compute)
+now = datetime.now(IST)
+if not (4 <= now.hour < 18):
+    print(f"🌙 Night Mode ({now.strftime('%I:%M %p')} IST) — skipping scrape. Service resumes at 4:00 AM IST.")
+    sys.exit(0)
 
-while True:
-    now = datetime.now(IST)
-    
-    if not current_token or not token_timestamp or (now - token_timestamp).total_seconds() > 3000:
-        current_token = get_fresh_token()
-        token_timestamp = datetime.now(IST)
-        
-    if current_token:
-        scrape_and_update_db(current_token)
-    
-    if 4 <= now.hour < 18:
-        print(f"⏳ Sleeping for 3 minutes... (Next run: {(datetime.now(IST).timestamp() + 180)})")
-        time.sleep(180) 
-    else:
-        # FIX 3: 7200 seconds is 2 hours (1200 was only 20 minutes!)
-        print("🌙 Night Mode Active. Sleeping for 2 hours...")
-        time.sleep(7200)
+# Daytime: get a fresh token, scrape once, then exit
+token = get_fresh_token()
+if token:
+    scrape_and_update_db(token)
+    print("✅ Worker completed successfully. Exiting.")
+else:
+    print("❌ Failed to get auth token. Exiting.")
+    sys.exit(1)

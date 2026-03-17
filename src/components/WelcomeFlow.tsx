@@ -115,6 +115,15 @@ export default function WelcomeFlow({ onComplete }: WelcomeFlowProps) {
             <div className="absolute -top-4 -right-4 text-3xl wobble-anim">⭐</div>
             <div className="absolute -top-2 -left-6 text-2xl float-anim" style={{ animationDelay: '1s' }}>✨</div>
 
+            {/* Mithya Logo */}
+            <div className="flex justify-center mb-2">
+              <img
+                src="/logo.png"
+                alt="Mithya"
+                className="w-16 h-16 rounded-full object-cover shadow-lg ring-2 ring-white/30"
+              />
+            </div>
+
             <div className="float-anim">
               <DoraemonAvatar />
             </div>
@@ -154,7 +163,12 @@ export default function WelcomeFlow({ onComplete }: WelcomeFlowProps) {
               <NobitaAvatar />
             </div>
 
-            <h2 className="text-2xl font-black text-white mt-4 drop-shadow-md leading-snug">
+            {/* Mithya branding */}
+            <div className="flex items-center justify-center gap-2 mt-4">
+              <img src="/logo.png" alt="Mithya" className="w-8 h-8 rounded-full object-cover" />
+              <span className="text-white font-black text-lg tracking-widest" style={{ letterSpacing: '0.15em' }}>MITHYA</span>
+            </div>
+            <h2 className="text-2xl font-black text-white mt-3 drop-shadow-md leading-snug">
               Hey there! 👋
             </h2>
             <p className="text-yellow-100 text-base mt-3 font-semibold leading-relaxed">
