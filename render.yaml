@@ -2,7 +2,7 @@ services:
   - type: web
     name: mithya-api
     env: python
-    buildCommand: pip install -r requirements.txt && playwright install chromium --with-deps
+    buildCommand: pip install -r requirements.txt && playwright install chromium
     startCommand: ./start.sh
     plan: free
     healthCheckPath: /api/search
