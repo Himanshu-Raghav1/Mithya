@@ -144,8 +144,8 @@ def scrape_and_update_db(token):
                 except:
                     continue 
 
-                # This works correctly now because current_time is IST!
-                if slot_start_time <= current_time:
+                # Skip slots that have ALREADY started (strictly in the past)
+                if slot_start_time < current_time:
                     continue 
 
                 slot_id = slot.get('id')

@@ -72,13 +72,16 @@ def get_posts():
 def create_post():
     try:
         data = request.json
-        if not data or not data.get('text') or not data.get('author'):
-            return jsonify({"success": False, "message": "Missing text or author"}), 400
+        if not data or not data.get('author'):
+            return jsonify({"success": False, "message": "Missing author"}), 400
+        if not data.get('text') and not data.get('image_url'):
+            return jsonify({"success": False, "message": "Post must have text or an image"}), 400
             
         new_post = {
             "id": str(uuid.uuid4()),
             "author": data.get('author'),
-            "text": data.get('text').strip(),
+            "text": data.get('text', '').strip(),
+            "image_url": data.get('image_url'),  # ← FIX: was missing, images never saved
             "timestamp": datetime.now().isoformat(),
             "likes": 0,
             "dislikes": 0,
