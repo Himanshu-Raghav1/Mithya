@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Search, Loader2, Upload, X, MessageCircle, AlertCircle, Plus, Image as ImageIcon } from 'lucide-react';
+import { Search, Loader2, Upload, X, MessageCircle, AlertCircle, Plus, Image as ImageIcon, Share2 } from 'lucide-react';
 import { uploadToCloudinary } from '../services/cloudinary';
 import { getLostFoundItems, createLostFoundItem } from '../services/api';
 import type { LostItem } from '../types';
@@ -117,6 +117,23 @@ export default function LostFound() {
     window.open(url, '_blank');
   };
 
+  const shareItem = async (item: any) => {
+    const text = `🔍 ${item.type.toUpperCase()}: "${item.item_name}" at MIT-WPU!\n${item.description}\n\nIf you've seen it, check Mithya — MIT's student app!`;
+    const url = 'https://mithya.vercel.app';
+
+    // Use native share sheet (works great on mobile)
+    if (navigator.share) {
+      try {
+        await navigator.share({ title: `${item.type}: ${item.item_name}`, text, url });
+        return;
+      } catch {}
+    }
+
+    // Fallback: share via WhatsApp Web
+    const waText = `${text}\n${url}`;
+    window.open(`https://wa.me/?text=${encodeURIComponent(waText)}`, '_blank');
+  };
+
   const filteredItems = items
     .filter(item => filter === 'All' ? true : item.type === filter)
     .filter(item =>
@@ -220,17 +237,27 @@ export default function LostFound() {
                   </p>
 
                   {/* Contact Area */}
-                  <div className="pt-3 border-t border-white/10 flex items-center justify-between mt-auto">
-                    <div className="text-xs text-white/50">
-                      Reported by: <span className="text-white/80 font-bold">{item.contact_name}</span>
+                  <div className="pt-3 border-t border-white/10 flex items-center justify-between mt-auto gap-2">
+                    <div className="text-xs text-white/50 min-w-0 truncate">
+                      By: <span className="text-white/80 font-bold">{item.contact_name}</span>
                     </div>
-                    <button
-                      onClick={() => openWhatsApp(item.phone_number, item.type, item.item_name)}
-                      className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold text-emerald-400 bg-emerald-400/10 hover:bg-emerald-400/20 transition-colors"
-                    >
-                      <MessageCircle className="w-4 h-4" />
-                      WhatsApp
-                    </button>
+                    <div className="flex gap-1.5 flex-shrink-0">
+                      <button
+                        onClick={() => shareItem(item)}
+                        className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-bold text-blue-300 bg-blue-400/10 hover:bg-blue-400/20 transition-colors"
+                        title="Share this post"
+                      >
+                        <Share2 className="w-3.5 h-3.5" />
+                        Share
+                      </button>
+                      <button
+                        onClick={() => openWhatsApp(item.phone_number, item.type, item.item_name)}
+                        className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-bold text-emerald-400 bg-emerald-400/10 hover:bg-emerald-400/20 transition-colors"
+                      >
+                        <MessageCircle className="w-3.5 h-3.5" />
+                        WhatsApp
+                      </button>
+                    </div>
                   </div>
                 </div>
               </motion.div>

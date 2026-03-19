@@ -80,7 +80,16 @@ export interface Contact {
   category: ContactCategory;
 }
 
-export type ContactCategory = 'Dean' | 'Faculty' | 'Emergency' | 'Admin';
+export type ContactCategory =
+  | 'Dean'
+  | 'Faculty'
+  | 'Emergency'
+  | 'Admin'
+  | 'Anti-Ragging'
+  | 'ICC'
+  | 'Grievance'
+  | 'SC-ST'
+  | 'Board';
 
 /** Degree programs offered */
 export type ProgramType = 'BTech' | 'BCA' | 'BBA' | 'BA' | 'B.com' | 'BSc' | 'B.des';

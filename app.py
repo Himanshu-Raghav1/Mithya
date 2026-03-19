@@ -2,7 +2,11 @@ from flask import Flask, jsonify, request
 from flask_cors import CORS
 from pymongo import MongoClient
 import uuid
-from datetime import datetime
+from datetime import datetime, timezone
+
+def utcnow() -> str:
+    """Returns current UTC time as ISO string with Z suffix — always use this for timestamps."""
+    return datetime.now(timezone.utc).strftime('%Y-%m-%dT%H:%M:%SZ')
 
 app = Flask(__name__)
 CORS(app) # This allows your frontend website to securely talk to this backend
@@ -82,7 +86,7 @@ def create_post():
             "author": data.get('author'),
             "text": data.get('text', '').strip(),
             "image_url": data.get('image_url'),  # ← FIX: was missing, images never saved
-            "timestamp": datetime.now().isoformat(),
+            "timestamp": utcnow(),
             "likes": 0,
             "dislikes": 0,
             "comments": [],
@@ -115,7 +119,7 @@ def add_comment(post_id):
             "id": str(uuid.uuid4()),
             "author": data.get('author'),
             "text": data.get('text').strip(),
-            "timestamp": datetime.now().isoformat()
+            "timestamp": utcnow()
         }
         
         result = voice_collection.update_one(
@@ -176,7 +180,7 @@ def create_lost_found_item():
             "phone_number": data.get('phone_number').strip(),
             "type": data.get('type', 'Lost'),
             "image_url": data.get('image_url'),
-            "timestamp": datetime.now().isoformat()
+            "timestamp": utcnow()
         }
         
         lost_found_collection.insert_one(new_item)
@@ -223,7 +227,7 @@ def create_event():
             "icon": data.get('icon', '📅'),
             "url": data.get('url', ''),
             "image_url": data.get('image_url', ''), # Cloudinary Poster URL
-            "timestamp": datetime.now().isoformat()
+            "timestamp": utcnow()
         }
         
         events_collection.insert_one(new_event)
@@ -277,7 +281,7 @@ def submit_pyq():
             "program": data.get('program', 'BTech').strip(),
             "semester": data.get('semester', '1').strip(),
             "is_approved": False,
-            "timestamp": datetime.now().isoformat()
+            "timestamp": utcnow()
         }
         
         pyqs_collection.insert_one(new_note)

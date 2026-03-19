@@ -5,13 +5,18 @@ import type { Contact, ContactCategory } from '../types';
 import { getContacts } from '../services/api';
 
 const CATEGORY_STYLE: Record<ContactCategory, { bg: string; text: string; border: string; emoji: string }> = {
-  Dean:      { bg: 'rgba(255,215,64,0.15)',  text: '#FFD740', border: 'rgba(255,215,64,0.3)',  emoji: '👑' },
-  Faculty:   { bg: 'rgba(0,168,232,0.15)',   text: '#4FC3F7', border: 'rgba(0,168,232,0.3)',   emoji: '🎓' },
-  Emergency: { bg: 'rgba(229,57,53,0.15)',   text: '#EF9A9A', border: 'rgba(229,57,53,0.3)',   emoji: '🚨' },
-  Admin:     { bg: 'rgba(76,175,80,0.15)',   text: '#81C784', border: 'rgba(76,175,80,0.3)',   emoji: '🏢' },
+  Dean:          { bg: 'rgba(255,215,64,0.15)',  text: '#FFD740', border: 'rgba(255,215,64,0.3)',  emoji: '👑' },
+  Faculty:       { bg: 'rgba(0,168,232,0.15)',   text: '#4FC3F7', border: 'rgba(0,168,232,0.3)',   emoji: '🎓' },
+  Emergency:     { bg: 'rgba(229,57,53,0.15)',   text: '#EF9A9A', border: 'rgba(229,57,53,0.3)',   emoji: '🚨' },
+  Admin:         { bg: 'rgba(76,175,80,0.15)',   text: '#81C784', border: 'rgba(76,175,80,0.3)',   emoji: '🏢' },
+  'Anti-Ragging':{ bg: 'rgba(244,67,54,0.15)',  text: '#FF7043', border: 'rgba(244,67,54,0.3)',  emoji: '🛡️' },
+  ICC:           { bg: 'rgba(156,39,176,0.15)',  text: '#CE93D8', border: 'rgba(156,39,176,0.3)',  emoji: '⚖️' },
+  Grievance:     { bg: 'rgba(255,152,0,0.15)',   text: '#FFB74D', border: 'rgba(255,152,0,0.3)',   emoji: '📋' },
+  'SC-ST':       { bg: 'rgba(0,150,136,0.15)',   text: '#4DB6AC', border: 'rgba(0,150,136,0.3)',   emoji: '🤝' },
+  Board:         { bg: 'rgba(63,81,181,0.15)',   text: '#7986CB', border: 'rgba(63,81,181,0.3)',   emoji: '🏛️' },
 };
 
-const CATEGORIES: ContactCategory[] = ['Emergency', 'Dean', 'Faculty', 'Admin'];
+const CATEGORIES: ContactCategory[] = ['Emergency', 'Dean', 'Faculty', 'Admin', 'Anti-Ragging', 'ICC', 'Grievance', 'SC-ST', 'Board'];
 
 function ContactCard({ contact }: { contact: Contact }) {
   const [copied, setCopied] = useState<'email' | 'phone' | null>(null);
