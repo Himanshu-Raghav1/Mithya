@@ -35,7 +35,7 @@ def search_game():
     IST = timezone(timedelta(hours=5, minutes=30))
     current_hour = datetime.now(IST).hour
 
-    # 🌙 Night Mode: Offline only between Midnight and 4 AM IST
+    # 🌙 Updated Night Mode: API is offline only from Midnight to 4:00 AM
     if 0 <= current_hour < 4:
         return jsonify({
             "success": False,

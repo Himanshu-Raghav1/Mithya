@@ -3,6 +3,7 @@ import sys
 import json
 import base64
 import time
+import gc
 from datetime import datetime, timezone, timedelta
 from pymongo import MongoClient
 from playwright.sync_api import sync_playwright
@@ -10,9 +11,8 @@ from playwright.sync_api import sync_playwright
 sys.stdout.reconfigure(encoding='utf-8')
 
 # ==========================================
-# ⏱️ TIMEZONE SETUP (CRITICAL FOR CLOUD)
+# ⏱️ TIMEZONE SETUP
 # ==========================================
-# Force the server to use Indian Standard Time (UTC +5:30)
 IST = timezone(timedelta(hours=5, minutes=30))
 
 # ==========================================
@@ -29,7 +29,8 @@ MONGO_URI = "mongodb+srv://Himanshu_Raghav:Divyanshu1@clusterh.jhljyt2.mongodb.n
 
 print("Attempting to connect to MongoDB...")
 try:
-    client = MongoClient(MONGO_URI)
+    # 🛡️ FIX: Give MongoDB 10 seconds to connect before panicking
+    client = MongoClient(MONGO_URI, serverSelectionTimeoutMS=10000)
     db = client['mithya_sports'] 
     slots_collection = db['available_slots']
     client.admin.command('ping') 
@@ -38,30 +39,38 @@ except Exception as e:
     print(f"❌ ERROR: {e}")
     sys.exit(1)
 
-
 # ==========================================
 # 👻 GHOST BROWSER LOGIN
 # ==========================================
 def get_fresh_token():
-    # Use IST instead of default server time
     print(f"\n[{datetime.now(IST).strftime('%I:%M %p')}] 👻 Getting a fresh authentication token...")
     
     with sync_playwright() as p:
-        browser = p.chromium.launch(headless=True)
+        browser = p.chromium.launch(
+            headless=True,
+            args=[
+                '--disable-dev-shm-usage',
+                '--no-sandbox',            
+                '--disable-gpu',           
+                '--disable-extensions',    
+                '--single-process',        
+                '--js-flags="--max-old-space-size=128"' 
+            ]
+        )
         context = browser.new_context()
         page = context.new_page()
         
         auth_token = None
         try:
-            page.goto(LOGIN_URL)
+            # 🛡️ FIX: Give the college 60 full seconds to load, don't use 'networkidle'
+            page.goto(LOGIN_URL, timeout=60000)
             page.fill("input[type='email']", EMAIL)
             page.fill("input[type='password']", PASSWORD)
             page.click("button[type='submit']")
             
-            page.wait_for_load_state("networkidle")
-            page.wait_for_timeout(3000)
+            page.wait_for_load_state("load", timeout=60000)
+            page.wait_for_timeout(4000)
             
-            # ATTEMPT 1: Check Cookies
             for cookie in context.cookies():
                 if "sb-kmqhrlinvxqnipvvlvwv-auth-token" in cookie["name"]:
                     raw_base64 = cookie["value"].replace("base64-", "")
@@ -69,7 +78,6 @@ def get_fresh_token():
                     auth_token = json.loads(decoded_bytes.decode('utf-8')).get("access_token")
                     break
             
-            # ATTEMPT 2: Check Local Storage
             if not auth_token:
                 local_storage = json.loads(page.evaluate("() => JSON.stringify(window.localStorage)"))
                 for key, value in local_storage.items():
@@ -80,9 +88,10 @@ def get_fresh_token():
         except Exception as e:
             print(f"Browser failed: {e}")
         finally:
-            # CRITICAL FIX: Always close context THEN browser to fully release Chromium RAM
+            page.close()
             context.close()
             browser.close()
+            gc.collect() 
 
         if auth_token:
             print("✅ Token acquired successfully!")
@@ -90,12 +99,10 @@ def get_fresh_token():
             print("❌ Failed to find token anywhere.")
         return auth_token
 
-
 # ==========================================
-# 🤖 SCRAPE AND SAVE TO DATABASE
+# 🤖 BULK SCRAPE AND SAVE TO DATABASE
 # ==========================================
 def scrape_and_update_db(token):
-    # FIX 2: Bind all time calculations to IST
     now = datetime.now(IST)
     today_date = now.strftime("%Y-%m-%d")
     current_time = now.time()
@@ -111,26 +118,28 @@ def scrape_and_update_db(token):
     fresh_data_to_save = []
 
     try:
+        # 🛡️ FIX: 15 Second Timeout
         sports_url = f"{SUPABASE_URL}/rest/v1/sports?select=*&is_active=eq.true"
-        sports_response = requests.get(sports_url, headers=headers)
+        sports_response = requests.get(sports_url, headers=headers, timeout=15)
         
         if sports_response.status_code != 200:
             print(f"⚠️ College server returned an error: {sports_response.status_code}")
             return 
             
         sports_data = sports_response.json()
-        
-        if not isinstance(sports_data, list):
-            print("⚠️ College server is offline or sent unexpected data.")
-            return
 
         for target_sport in sports_data:
             sport_id = target_sport.get('id')
             sport_name = target_sport.get('name')
-            total_seats = target_sport.get('capacity', 2)
+            total_seats = target_sport.get('seat_limit', target_sport.get('capacity', 2))
 
-            slots_response = requests.get(f"{SUPABASE_URL}/rest/v1/slots?select=*&sport_id=eq.{sport_id}", headers=headers)
-            slots_data = slots_response.json()
+            # 🛡️ FIX: Shield the slot fetch so one failure doesn't crash the whole script
+            try:
+                slots_response = requests.get(f"{SUPABASE_URL}/rest/v1/slots?select=*&sport_id=eq.{sport_id}", headers=headers, timeout=15)
+                slots_data = slots_response.json()
+            except Exception as e:
+                print(f"⚠️ Timeout fetching slots for {sport_name}. Skipping to next sport.")
+                continue
             
             if not isinstance(slots_data, list):
                 continue 
@@ -139,36 +148,57 @@ def scrape_and_update_db(token):
                 start_time_str = slot.get('start_time', '')
                 end_time_str = slot.get('end_time', '')
                 
+                # Bulletproof Time Parser
                 try:
-                    slot_start_time = datetime.strptime(start_time_str, "%H:%M:%S").time()
-                except:
+                    if 'T' in start_time_str:
+                        time_part = start_time_str.split('T')[1].split('+')[0].split('Z')[0]
+                        slot_start_time = datetime.strptime(time_part[:8], "%H:%M:%S").time()
+                    else:
+                        clean_time = start_time_str.split('+')[0].strip()
+                        if len(clean_time) >= 8:
+                            slot_start_time = datetime.strptime(clean_time[:8], "%H:%M:%S").time()
+                        else:
+                            slot_start_time = datetime.strptime(clean_time[:5], "%H:%M").time()
+                except Exception as e:
                     continue 
 
-                # Skip slots that have ALREADY started (strictly in the past)
+                # Skip slots that have ALREADY started
                 if slot_start_time < current_time:
                     continue 
 
+                # 🛑 THE BADMINTON KILL-SWITCH
+                if "badminton" in sport_name.lower():
+                    cutoff_time = datetime.strptime("18:45:00", "%H:%M:%S").time()
+                    if slot_start_time > cutoff_time:
+                        continue 
+
                 slot_id = slot.get('id')
                 
-                bookings_url = f"{SUPABASE_URL}/rest/v1/bookings?select=*&slot_id=eq.{slot_id}&booking_date=eq.{today_date}"
-                bookings_response = requests.get(bookings_url, headers=headers)
-                
-                if bookings_response.status_code == 200:
-                    bookings = bookings_response.json()
-                    current_bookings = len(bookings) if isinstance(bookings, list) else total_seats
+                # 🛡️ FIX: Reverted to slot_id, added 10 second timeout, and wrapped in try/except
+                try:
+                    bookings_url = f"{SUPABASE_URL}/rest/v1/bookings?select=*&slot_id=eq.{slot_id}&booking_date=eq.{today_date}"
+                    bookings_response = requests.get(bookings_url, headers=headers, timeout=10)
                     
-                    if current_bookings < total_seats:
-                        seats_left = total_seats - current_bookings
-                        
-                        fresh_data_to_save.append({
-                            "game_name": sport_name.lower(), 
-                            "display_name": sport_name,
-                            "start_time": start_time_str,
-                            "end_time": end_time_str,
-                            "seats_open": seats_left,
-                            "last_updated": now.strftime("%Y-%m-%d %H:%M:%S")
-                        })
+                    if bookings_response.status_code == 200:
+                        bookings = bookings_response.json()
+                        current_bookings = len(bookings) if isinstance(bookings, list) else total_seats
+                    else:
+                        current_bookings = total_seats # If error, assume full to be safe
+                except Exception as e:
+                    current_bookings = total_seats # If timeout, assume full
 
+                if current_bookings < total_seats:
+                    seats_left = total_seats - current_bookings
+                    fresh_data_to_save.append({
+                        "game_name": sport_name.lower(), 
+                        "display_name": sport_name,
+                        "start_time": start_time_str,
+                        "end_time": end_time_str,
+                        "seats_open": seats_left,
+                        "last_updated": now.strftime("%Y-%m-%d %H:%M:%S")
+                    })
+
+        # WIPE AND SAVE
         print("🗑️ Wiping old database records...")
         slots_collection.delete_many({}) 
 
@@ -182,27 +212,23 @@ def scrape_and_update_db(token):
     except Exception as e:
         print(f"❌ An error occurred during the scan: {e}")
 
-
 # ==========================================
-# 🚀 SINGLE-RUN ENTRY POINT
+# 🚀 SINGLE-RUN ENTRY POINT 
 # ==========================================
-# This script is designed to run ONCE and exit.
-# Render's Cron Job service re-runs it on schedule (every 3 minutes).
-print("==========================================")
-print("   🏅 MITHYA SPORTS WORKER STARTING      ")
-print("==========================================")
+if __name__ == "__main__":
+    print("==========================================")
+    print("   🏅 MITHYA SPORTS WORKER STARTING       ")
+    print("==========================================")
 
-# ⏰ Night-time guard: Don't scrape between 6 PM and 4 AM IST (saves Render compute)
-now = datetime.now(IST)
-if not (4 <= now.hour < 18):
-    print(f"🌙 Night Mode ({now.strftime('%I:%M %p')} IST) — skipping scrape. Service resumes at 4:00 AM IST.")
-    sys.exit(0)
+    now = datetime.now(IST)
+    if 0 <= now.hour < 4:
+        print(f"🌙 Night Mode ({now.strftime('%I:%M %p')} IST) — skipping scrape. Service resumes at 4:00 AM IST.")
+        sys.exit(0)
 
-# Daytime: get a fresh token, scrape once, then exit
-token = get_fresh_token()
-if token:
-    scrape_and_update_db(token)
-    print("✅ Worker completed successfully. Exiting.")
-else:
-    print("❌ Failed to get auth token. Exiting.")
-    sys.exit(1)
+    token = get_fresh_token()
+    if token:
+        scrape_and_update_db(token)
+        print("✅ Worker completed successfully. Exiting.")
+    else:
+        print("❌ Failed to get auth token. Exiting.")
+        sys.exit(1)
