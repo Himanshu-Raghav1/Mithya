@@ -3,18 +3,17 @@ from flask_cors import CORS
 from pymongo import MongoClient
 import uuid
 from datetime import datetime, timezone
+import os 
 
 def utcnow() -> str:
-    """Returns current UTC time as ISO string with Z suffix — always use this for timestamps."""
     return datetime.now(timezone.utc).strftime('%Y-%m-%dT%H:%M:%SZ')
 
 app = Flask(__name__)
-CORS(app) # This allows your frontend website to securely talk to this backend
+CORS(app) 
 
 # ==========================================
 # ⚙️ MONGODB CONNECTION
 # ==========================================
-# Using your verified, working connection!
 MONGO_URI = "mongodb+srv://Himanshu_Raghav:Divyanshu1@clusterh.jhljyt2.mongodb.net/?retryWrites=true&w=majority&appName=ClusterH"
 client = MongoClient(MONGO_URI)
 db = client['mithya_sports']
@@ -25,8 +24,6 @@ events_collection = db['mithya_events']
 pyqs_collection = db['pyqs_notes']
 contacts_collection = db['important_contacts']
 
-# Very simple admin password from environment, default for local testing
-import os
 ADMIN_PASSWORD = os.environ.get("ADMIN_PASSWORD", "mithya_admin_123")
 
 # ==========================================
@@ -38,19 +35,17 @@ def search_game():
     IST = timezone(timedelta(hours=5, minutes=30))
     current_hour = datetime.now(IST).hour
 
-    # 🌙 Night-time: scraper is offline between 6 PM and 4 AM IST
-    if not (4 <= current_hour < 18):
+    # 🌙 Night Mode: Offline only between Midnight and 4 AM IST
+    if 0 <= current_hour < 4:
         return jsonify({
             "success": False,
-            "message": "🌙 Slot checking service is offline between 6 PM – 4 AM IST. Check back in the morning!"
+            "message": "🌙 Slot checking service is offline for the night. Check back at 4:00 AM!"
         })
 
     game_query = request.args.get('game', '').lower()
     
     if not game_query:
         return jsonify({"success": False, "message": "Please enter a game name."})
-
-    print(f"🔍 Someone searched for: {game_query}")
 
     query = {"game_name": {"$regex": game_query, "$options": "i"}}
     results = list(slots_collection.find(query, {"_id": 0}))
@@ -61,12 +56,11 @@ def search_game():
         return jsonify({"success": False, "message": f"No open slots found for '{game_query}' right now."})
 
 # ==========================================
-# 🗣️ MITVOICE FORUM ENDPOINTS (MONGODB)
+# 🗣️ MITVOICE FORUM ENDPOINTS 
 # ==========================================
 @app.route('/api/voice/posts', methods=['GET'])
 def get_posts():
     try:
-        # Sort by timestamp descending (newest first)
         posts = list(voice_collection.find({}, {"_id": 0}).sort("timestamp", -1))
         return jsonify({"success": True, "data": posts})
     except Exception as e:
@@ -85,7 +79,7 @@ def create_post():
             "id": str(uuid.uuid4()),
             "author": data.get('author'),
             "text": data.get('text', '').strip(),
-            "image_url": data.get('image_url'),  # ← FIX: was missing, images never saved
+            "image_url": data.get('image_url'), 
             "timestamp": utcnow(),
             "likes": 0,
             "dislikes": 0,
@@ -95,7 +89,6 @@ def create_post():
         
         voice_collection.insert_one(new_post)
         
-        # ENFORCE 50 POST LIMIT (Rolling Window)
         total_posts = voice_collection.count_documents({})
         if total_posts > 50:
             excess_count = total_posts - 50
@@ -154,12 +147,11 @@ def interact_post(post_id, action):
         return jsonify({"success": False, "message": str(e)})
 
 # ==========================================
-# 🧳 LOST & FOUND ENDPOINTS (MONGODB)
+# 🧳 LOST & FOUND ENDPOINTS
 # ==========================================
 @app.route('/api/lostfound', methods=['GET'])
 def get_lost_found_items():
     try:
-        # Sort by timestamp descending (newest first)
         items = list(lost_found_collection.find({}, {"_id": 0}).sort("timestamp", -1))
         return jsonify({"success": True, "data": items})
     except Exception as e:
@@ -185,7 +177,6 @@ def create_lost_found_item():
         
         lost_found_collection.insert_one(new_item)
         
-        # ENFORCE 100 ITEM LIMIT (Rolling Window to save space)
         total_items = lost_found_collection.count_documents({})
         if total_items > 100:
             excess_count = total_items - 100
@@ -199,12 +190,11 @@ def create_lost_found_item():
         return jsonify({"success": False, "message": str(e)})
 
 # ==========================================
-# 🎟️ UPCOMING EVENTS ENDPOINTS (MONGODB)
+# 🎟️ UPCOMING EVENTS ENDPOINTS
 # ==========================================
 @app.route('/api/events', methods=['GET'])
 def get_events():
     try:
-        # Sort by date
         items = list(events_collection.find({}, {"_id": 0}).sort("date", 1))
         return jsonify({"success": True, "data": items})
     except Exception as e:
@@ -226,21 +216,19 @@ def create_event():
             "organizer": data.get('organizer', 'MIT-WPU').strip(),
             "icon": data.get('icon', '📅'),
             "url": data.get('url', ''),
-            "image_url": data.get('image_url', ''), # Cloudinary Poster URL
+            "image_url": data.get('image_url', ''), 
             "timestamp": utcnow()
         }
         
         events_collection.insert_one(new_event)
-        
         new_event.pop('_id', None)
         return jsonify({"success": True, "data": new_event})
     except Exception as e:
         return jsonify({"success": False, "message": str(e)})
 
 # ==========================================
-# 📚 PYQs & NOTES (MONGODB + ADMIN APPROVAL)
+# 📚 PYQs & NOTES 
 # ==========================================
-
 @app.route('/api/pyqs', methods=['GET'])
 def get_pyqs():
     try:
@@ -285,7 +273,6 @@ def submit_pyq():
         }
         
         pyqs_collection.insert_one(new_note)
-        
         new_note.pop('_id', None)
         return jsonify({
             "success": True, 
@@ -295,8 +282,9 @@ def submit_pyq():
     except Exception as e:
         return jsonify({"success": False, "message": str(e)})
 
-# --- ADMIN SECURE ENDPOINTS ---
-
+# ==========================================
+# 🔒 ADMIN SECURE ENDPOINTS 
+# ==========================================
 @app.route('/api/admin/verify', methods=['POST'])
 def verify_admin():
     try:
@@ -314,8 +302,6 @@ def verify_admin():
 @app.route('/api/admin/pending_pyqs', methods=['GET'])
 def get_pending_pyqs():
     try:
-        # In a real app, this would check an Authorization header token. 
-        # Since this is a simple college tool, we rely on the frontend password gate.
         pending_notes = list(pyqs_collection.find({"is_approved": False}, {"_id": 0}).sort("timestamp", -1))
         return jsonify({"success": True, "data": pending_notes})
     except Exception as e:
@@ -364,9 +350,8 @@ def admin_delete_comment(post_id, comment_id):
         return jsonify({"success": False, "message": str(e)})
 
 # ==========================================
-# 📞 IMPORTANT CONTACTS (MONGODB)
+# 📞 IMPORTANT CONTACTS 
 # ==========================================
-
 @app.route('/api/contacts', methods=['GET'])
 def get_contacts():
     try:
@@ -398,22 +383,10 @@ def create_contact():
     except Exception as e:
         return jsonify({"success": False, "message": str(e)})
 
-@app.route('/api/admin/contacts/<contact_id>', methods=['DELETE'])
-def delete_contact(contact_id):
-    try:
-        result = contacts_collection.delete_one({"id": contact_id})
-        if result.deleted_count == 0:
-            return jsonify({"success": False, "message": "Contact not found"}), 404
-        return jsonify({"success": True, "message": "Contact deleted"})
-    except Exception as e:
-        return jsonify({"success": False, "message": str(e)})
-
-import os # Add this at the top of your file
 
 if __name__ == '__main__':
     print("==========================================")
     print("   🚀 MITHYA API SERVER IS LIVE! ")
     print("==========================================")
-    # Render provides a PORT environment variable. If not found, it defaults to 5000.
     port = int(os.environ.get("PORT", 5000))
     app.run(host="0.0.0.0", port=port, debug=False)
