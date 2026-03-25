@@ -129,11 +129,17 @@ def scrape_and_update_db(token):
         sports_data = sports_response.json()
 
         for target_sport in sports_data:
+            # 🚦 THE POLITE PAUSE
+            time.sleep(1) 
+            
             sport_id = target_sport.get('id')
             sport_name = target_sport.get('name')
-            total_seats = target_sport.get('seat_limit', target_sport.get('capacity', 2))
+            
+            # 🛡️ FIX 1: Safe math! Prevents crashes if the college leaves capacity blank (null)
+            seat_limit = target_sport.get('seat_limit')
+            capacity = target_sport.get('capacity')
+            total_seats = seat_limit if seat_limit is not None else (capacity if capacity is not None else 2)
 
-            # 🛡️ FIX: Shield the slot fetch so one failure doesn't crash the whole script
             try:
                 slots_response = requests.get(f"{SUPABASE_URL}/rest/v1/slots?select=*&sport_id=eq.{sport_id}", headers=headers, timeout=15)
                 slots_data = slots_response.json()
@@ -145,10 +151,14 @@ def scrape_and_update_db(token):
                 continue 
 
             for slot in slots_data:
+                # 🛑 FIX 2: THE ADMIN SHIELD
+                # If the admin manually disabled the slot for maintenance (shows as 'Ended' early)
+                if slot.get('is_active') is False or str(slot.get('status', '')).lower() in ['ended', 'inactive', 'closed']:
+                    continue
+
                 start_time_str = slot.get('start_time', '')
                 end_time_str = slot.get('end_time', '')
                 
-                # Bulletproof Time Parser
                 try:
                     if 'T' in start_time_str:
                         time_part = start_time_str.split('T')[1].split('+')[0].split('Z')[0]
@@ -166,7 +176,7 @@ def scrape_and_update_db(token):
                 if slot_start_time < current_time:
                     continue 
 
-                # 🛑 THE BADMINTON KILL-SWITCH
+                # The Badminton Kill-Switch (Keeps 7 PM+ ghosts away)
                 if "badminton" in sport_name.lower():
                     cutoff_time = datetime.strptime("18:45:00", "%H:%M:%S").time()
                     if slot_start_time > cutoff_time:
@@ -174,7 +184,6 @@ def scrape_and_update_db(token):
 
                 slot_id = slot.get('id')
                 
-                # 🛡️ FIX: Reverted to slot_id, added 10 second timeout, and wrapped in try/except
                 try:
                     bookings_url = f"{SUPABASE_URL}/rest/v1/bookings?select=*&slot_id=eq.{slot_id}&booking_date=eq.{today_date}"
                     bookings_response = requests.get(bookings_url, headers=headers, timeout=10)
@@ -183,9 +192,9 @@ def scrape_and_update_db(token):
                         bookings = bookings_response.json()
                         current_bookings = len(bookings) if isinstance(bookings, list) else total_seats
                     else:
-                        current_bookings = total_seats # If error, assume full to be safe
+                        current_bookings = total_seats 
                 except Exception as e:
-                    current_bookings = total_seats # If timeout, assume full
+                    current_bookings = total_seats 
 
                 if current_bookings < total_seats:
                     seats_left = total_seats - current_bookings
