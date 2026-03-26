@@ -1,5 +1,8 @@
+import { useState } from 'react';
 import { motion } from 'framer-motion';
 import type { TabId } from '../types';
+import { useAuth } from '../context/AuthContext';
+import AuthModal from './AuthModal';
 
 interface NavbarProps {
   activeTab: TabId;
@@ -18,6 +21,10 @@ const tabs: { id: TabId; label: string; emoji: string }[] = [
 ];
 
 export default function Navbar({ activeTab, onTabChange }: NavbarProps) {
+  const { user, logout } = useAuth();
+  const [showAuth, setShowAuth]     = useState(false);
+  const [showLogout, setShowLogout] = useState(false);
+
   return (
     <nav
       className="sticky top-0 z-40 w-full"
@@ -50,10 +57,39 @@ export default function Navbar({ activeTab, onTabChange }: NavbarProps) {
             MITHYA
           </h1>
         </div>
-        <div className="text-white/60 text-xs font-semibold hidden sm:block">
-          MIT's Unofficial Hub ✦
+        <div className="flex items-center gap-2">
+          {!user ? (
+            <button
+              onClick={() => setShowAuth(true)}
+              className="px-3 py-1.5 rounded-xl text-[11px] font-black text-yellow-400 bg-yellow-400/10 hover:bg-yellow-400/20 border border-yellow-400/20 transition-colors"
+            >
+              Login
+            </button>
+          ) : (
+            <div className="relative">
+              <button
+                onClick={() => setShowLogout(v => !v)}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white/10 hover:bg-white/15 transition-colors text-white text-[11px] font-black"
+              >
+                <span className="text-yellow-300">@</span>{user.anon_name}
+              </button>
+              {showLogout && (
+                <div className="absolute right-0 top-10 bg-[#0d1333] border border-white/15 rounded-xl p-2 z-50 w-40 shadow-xl">
+                  <p className="text-white/30 text-[10px] px-2 pb-1 truncate">{user.email}</p>
+                  <button
+                    onClick={() => { logout(); setShowLogout(false); }}
+                    className="w-full text-left px-3 py-2 text-xs font-bold text-red-400 hover:bg-red-400/10 rounded-lg transition-colors"
+                  >
+                    Logout
+                  </button>
+                </div>
+              )}
+            </div>
+          )}
         </div>
       </div>
+
+      {showAuth && <AuthModal onClose={() => setShowAuth(false)} />}
 
       {/* Tab scroll bar */}
       <div className="flex overflow-x-auto tab-scroll px-2 pb-2 gap-1">

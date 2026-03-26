@@ -30,6 +30,13 @@ export default function QuickLinks() {
       icon: <AlertTriangle className="w-6 h-6 text-white" />,
       url: "https://docs.google.com/forms/d/e/1FAIpQLSeT1_1hwZxzruBy5VScX8ofi1zmOB7PazriurV1UGKprpADWQ/viewform",
       color: ["#E53935", "#C62828"]
+    },
+    {
+      title: "MIT-WPU Faculty",
+      desc: "Faculty Directory",
+      icon: <LinkIcon className="w-6 h-6 text-white" />,
+      url: "https://mitwpu.edu.in/faculty",
+      color: ["#7B1FA2", "#4A148C"]
     }
   ];
 

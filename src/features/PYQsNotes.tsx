@@ -1,9 +1,11 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
 import { motion } from 'framer-motion';
-import { BookOpen, Upload, Loader2, Link as LinkIcon, Download, Search, X } from 'lucide-react';
+import { BookOpen, Upload, Loader2, Link as LinkIcon, Download, Search, X, Lock } from 'lucide-react';
 import { getPyqs, submitPyq } from '../services/api';
 import { uploadToCloudinary } from '../services/cloudinary';
 import type { ProgramType } from '../types';
+import { useAuth } from '../context/AuthContext';
+import AuthModal from '../components/AuthModal';
 
 // Doraemon Reading SVG
 function DoraemonReading() {
@@ -38,6 +40,8 @@ const PROGRAMS: ProgramType[] = ['BTech', 'BCA', 'BBA', 'BA', 'B.com', 'BSc', 'B
 const SEMESTERS = ['1', '2', '3', '4'];
 
 export default function PYQsNotes() {
+  const { user } = useAuth();
+  const [showAuth, setShowAuth] = useState(false);
   const [activeTab, setActiveTab] = useState<'feed' | 'upload'>('feed');
 
   // Feed State
@@ -126,6 +130,32 @@ export default function PYQsNotes() {
 
   return (
     <div className="p-4 space-y-4 max-w-3xl mx-auto pb-24">
+      {showAuth && <AuthModal onClose={() => setShowAuth(false)} reason="to access PYQs & Notes" />}
+
+      {/* 🔒 Auth Lock Screen */}
+      {!user && (
+        <div className="flex flex-col items-center justify-center min-h-[60vh] gap-6 text-center">
+          <div className="glass-card p-8 max-w-sm w-full space-y-4" style={{ background: 'rgba(255,255,255,0.05)' }}>
+            <div className="w-20 h-20 rounded-full bg-yellow-400/10 flex items-center justify-center mx-auto border-2 border-yellow-400/30">
+              <Lock className="w-10 h-10 text-yellow-400" />
+            </div>
+            <h2 className="text-xl font-black text-white">PYQs & Notes 📚</h2>
+            <p className="text-white/50 text-sm leading-relaxed">
+              Login with your <span className="text-blue-300">@mitwpu.edu.in</span> email to access semester notes, PYQs, and study materials.
+            </p>
+            <button
+              onClick={() => setShowAuth(true)}
+              className="w-full py-3 rounded-xl font-black text-sm text-black bg-yellow-400 hover:bg-yellow-300 transition-all"
+            >
+              Login to Access →
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Main content (only shown when logged in) */}
+      {user && <>
+
       {/* Banner */}
       <div
         className="glass-card p-4 sm:p-6 flex flex-col sm:flex-row items-center gap-4 border"
@@ -439,6 +469,7 @@ export default function PYQsNotes() {
           </form>
         </motion.div>
       )}
+      </>}
     </div>
   );
 }

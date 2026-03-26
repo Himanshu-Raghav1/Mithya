@@ -1,9 +1,9 @@
 from flask import Flask, jsonify, request
 from flask_cors import CORS
 from pymongo import MongoClient
-import uuid
-from datetime import datetime, timezone
-import os 
+import uuid, os, jwt
+from functools import wraps
+from datetime import datetime, timezone, timedelta
 
 def utcnow() -> str:
     return datetime.now(timezone.utc).strftime('%Y-%m-%dT%H:%M:%SZ')
@@ -23,8 +23,29 @@ lost_found_collection = db['lost_and_found']
 events_collection = db['mithya_events']
 pyqs_collection = db['pyqs_notes']
 contacts_collection = db['important_contacts']
+users_collection    = db['mithya_users']
 
 ADMIN_PASSWORD = os.environ.get("ADMIN_PASSWORD", "mithya_admin_123")
+SECRET_KEY     = os.environ.get("SECRET_KEY", "mithya_dev_secret_change_this")
+
+# ==========================================
+# 🔐 JWT AUTH DECORATOR
+# ==========================================
+def require_auth(f):
+    @wraps(f)
+    def decorated(*args, **kwargs):
+        token = request.headers.get('Authorization', '').replace('Bearer ', '')
+        if not token:
+            return jsonify({"success": False, "message": "Login required to do this 🔒"}), 401
+        try:
+            payload = jwt.decode(token, SECRET_KEY, algorithms=["HS256"])
+            request.auth_user = payload  # {user_id, email, anon_name}
+        except jwt.ExpiredSignatureError:
+            return jsonify({"success": False, "message": "Session expired, please log in again"}), 401
+        except jwt.InvalidTokenError:
+            return jsonify({"success": False, "message": "Invalid token"}), 401
+        return f(*args, **kwargs)
+    return decorated
 
 # ==========================================
 # 🌐 THE PUBLIC API - LIVE SPORTS
@@ -102,26 +123,44 @@ def create_post():
         return jsonify({"success": False, "message": str(e)})
 
 @app.route('/api/voice/posts/<post_id>/comment', methods=['POST'])
+@require_auth
 def add_comment(post_id):
     try:
-        data = request.json
-        if not data or not data.get('text') or not data.get('author'):
-            return jsonify({"success": False, "message": "Missing text or author"}), 400
-            
+        data      = request.json or {}
+        text      = data.get('text', '').strip()
+        auth_user = request.auth_user  # from JWT
+        user_id   = auth_user['user_id']
+        anon_name = auth_user['anon_name']
+
+        if not text:
+            return jsonify({"success": False, "message": "Comment cannot be empty"}), 400
+
+        # ── Rate limit: max 5 comments per hour ──────────────────────────────
+        one_hour_ago = (datetime.now(timezone.utc) - timedelta(hours=1)).strftime('%Y-%m-%dT%H:%M:%SZ')
+        user_doc     = users_collection.find_one({"id": user_id})
+        if user_doc:
+            recent = [t for t in user_doc.get('comment_timestamps', []) if t > one_hour_ago]
+            if len(recent) >= 5:
+                return jsonify({"success": False, "message": "⏰ You've hit the 5 comments/hour limit. Try again later!"}), 429
+            # Keep only last 20 timestamps to avoid bloat
+            updated = sorted(recent + [utcnow()])[-20:]
+            users_collection.update_one({"id": user_id}, {"$set": {"comment_timestamps": updated}})
+
         new_comment = {
-            "id": str(uuid.uuid4()),
-            "author": data.get('author'),
-            "text": data.get('text').strip(),
+            "id":        str(uuid.uuid4()),
+            "author":    anon_name,
+            "text":      text,
             "timestamp": utcnow()
         }
-        
+
         result = voice_collection.update_one(
             {"id": post_id},
             {"$push": {"comments": new_comment}}
         )
         if result.modified_count == 0:
             return jsonify({"success": False, "message": "Post not found"}), 404
-            
+
+
         return jsonify({"success": True, "data": new_comment})
     except Exception as e:
         return jsonify({"success": False, "message": str(e)})

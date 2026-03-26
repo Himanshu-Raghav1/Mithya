@@ -87,12 +87,15 @@ export async function createForumPost(text: string, author: string, image_url?: 
   }
 }
 
-export async function addComment(postId: string, text: string, author: string): Promise<ApiResponse<Comment>> {
+export async function addComment(postId: string, text: string, token: string): Promise<ApiResponse<Comment>> {
   try {
     const res = await fetch(`${API_BASE_URL}/api/voice/posts/${postId}/comment`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ text, author })
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`,
+      },
+      body: JSON.stringify({ text })
     });
     return await res.json() as ApiResponse<Comment>;
   } catch {

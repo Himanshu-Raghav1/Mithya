@@ -1,9 +1,11 @@
 import { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Send, ThumbsUp, ThumbsDown, MessageCircle, Flag, ChevronDown, Loader2, Image as ImageIcon, X } from 'lucide-react';
+import { Send, ThumbsUp, ThumbsDown, MessageCircle, Flag, ChevronDown, Loader2, Image as ImageIcon, X, Lock } from 'lucide-react';
 import type { ForumPost, Comment } from '../types';
 import { getForumPosts, createForumPost, addComment, interactWithPost } from '../services/api';
 import { uploadToCloudinary } from '../services/cloudinary';
+import { useAuth } from '../context/AuthContext';
+import AuthModal from '../components/AuthModal';
 
 // Nobita SVG for banner
 function NobitaMini() {
@@ -46,6 +48,8 @@ function timeAgo(dateString: string): string {
 }
 
 export default function MITVoice() {
+  const { user, token } = useAuth();
+  const [showAuth, setShowAuth] = useState(false);
   const [posts, setPosts] = useState<ForumPost[]>([]);
   const [loading, setLoading] = useState(true);
   const [newText, setNewText] = useState('');
@@ -57,8 +61,6 @@ export default function MITVoice() {
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [isUploading, setIsUploading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
-  
-  const myAnonId = getAnonymousId();
 
   // Load from MongoDB
   const loadPosts = async () => {
@@ -93,6 +95,8 @@ export default function MITVoice() {
 
   const handleShare = async () => {
     if (!newText.trim() && !selectedImage) return;
+    // Image posts require auth
+    if (selectedImage && !user) { setShowAuth(true); return; }
     
     setIsUploading(true);
     let uploadedUrl = undefined;
@@ -101,12 +105,12 @@ export default function MITVoice() {
       if (selectedImage) {
         uploadedUrl = await uploadToCloudinary(selectedImage);
       }
-      
-      const res = await createForumPost(newText.trim(), myAnonId, uploadedUrl);
+      const authorName = user ? user.anon_name : getAnonymousId();
+      const res = await createForumPost(newText.trim(), authorName, uploadedUrl);
       if (res.success) {
         setNewText('');
         clearImage();
-        loadPosts(); // refresh feed
+        loadPosts();
       } else {
         alert("Failed to post: " + res.message);
       }
@@ -154,10 +158,13 @@ export default function MITVoice() {
     const text = commentInputs[postId]?.trim();
     if (!text) return;
 
+    // Comments require auth
+    if (!user || !token) { setShowAuth(true); return; }
+
     // Optimistic UI update
     const tempComment: Comment = {
       id: `temp-${Date.now()}`,
-      author: myAnonId,
+      author: user.anon_name,
       text,
       timestamp: new Date().toISOString()
     };
@@ -165,12 +172,14 @@ export default function MITVoice() {
     setPosts(posts.map(p => p.id === postId ? { ...p, comments: [...p.comments, tempComment] } : p));
     setCommentInputs(prev => ({ ...prev, [postId]: '' }));
 
-    await addComment(postId, text, myAnonId);
-    loadPosts(); // Sync full state silently
+    const res = await addComment(postId, text, token);
+    if (!res.success) alert(res.message);
+    loadPosts();
   };
 
   return (
     <div className="p-4 space-y-4">
+      {showAuth && <AuthModal onClose={() => setShowAuth(false)} reason="to comment or post images" />}
       {/* Nobita banner */}
       <div className="glass-card p-4 flex items-center gap-4" style={{ background: 'rgba(255,215,64,0.12)', border: '1px solid rgba(255,215,64,0.25)' }}>
         <div className="float-anim">

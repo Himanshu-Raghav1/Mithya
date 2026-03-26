@@ -1,0 +1,9 @@
+# Requirements for the auth proxy service (deploy on SECOND Render account)
+# Build command:  pip install -r requirements_auth.txt
+# Start command:  gunicorn --bind=0.0.0.0:${PORT:-5001} --timeout 60 auth_service:app
+Flask==3.0.0
+flask-cors==4.0.0
+pymongo==4.6.1
+requests==2.31.0
+PyJWT==2.8.0
+gunicorn==21.2.0
