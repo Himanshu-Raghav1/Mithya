@@ -35,7 +35,7 @@ export default function QuickLinks() {
       title: "MIT-WPU Faculty",
       desc: "Faculty Directory",
       icon: <LinkIcon className="w-6 h-6 text-white" />,
-      url: "https://mitwpu.edu.in/faculty",
+      url: "https://mitwpu.edu.in/faculty-members",
       color: ["#7B1FA2", "#4A148C"]
     }
   ];
