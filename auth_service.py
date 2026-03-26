@@ -148,7 +148,10 @@ def send_otp():
         )
 
         if res.status_code not in (200, 204):
-            err = res.json().get('msg', 'Could not send OTP')
+            try:
+                err = res.json().get('msg', 'Could not send OTP')
+            except ValueError:
+                err = f'Supabase Error {res.status_code}: Email provider (Resend) failed to send the OTP'
             return jsonify({"success": False, "message": err}), 500
 
         return jsonify({
@@ -188,7 +191,10 @@ def verify_otp():
         )
 
         if res.status_code != 200:
-            msg = res.json().get('msg', 'Invalid or expired OTP ❌')
+            try:
+                msg = res.json().get('msg', 'Invalid or expired OTP ❌')
+            except ValueError:
+                msg = f'Supabase Error {res.status_code}: Failed to verify OTP'
             return jsonify({"success": False, "message": msg}), 400
 
         # Get the Supabase user ID from the response
