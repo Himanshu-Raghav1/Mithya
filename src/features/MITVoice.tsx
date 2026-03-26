@@ -95,8 +95,8 @@ export default function MITVoice() {
 
   const handleShare = async () => {
     if (!newText.trim() && !selectedImage) return;
-    // Image posts require auth
-    if (selectedImage && !user) { setShowAuth(true); return; }
+    // All posts now require auth (backend enforces this too)
+    if (!user || !token) { setShowAuth(true); return; }
     
     setIsUploading(true);
     let uploadedUrl = undefined;
@@ -105,8 +105,7 @@ export default function MITVoice() {
       if (selectedImage) {
         uploadedUrl = await uploadToCloudinary(selectedImage);
       }
-      const authorName = user ? user.anon_name : getAnonymousId();
-      const res = await createForumPost(newText.trim(), authorName, uploadedUrl);
+      const res = await createForumPost(newText.trim(), token, uploadedUrl);
       if (res.success) {
         setNewText('');
         clearImage();

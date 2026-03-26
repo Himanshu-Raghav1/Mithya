@@ -9,12 +9,14 @@ def utcnow() -> str:
     return datetime.now(timezone.utc).strftime('%Y-%m-%dT%H:%M:%SZ')
 
 app = Flask(__name__)
-CORS(app) 
+CORS(app, origins=["https://mithya.vercel.app", "http://localhost:5173"]) 
 
 # ==========================================
 # ⚙️ MONGODB CONNECTION
 # ==========================================
-MONGO_URI = "mongodb+srv://Himanshu_Raghav:Divyanshu1@clusterh.jhljyt2.mongodb.net/?retryWrites=true&w=majority&appName=ClusterH"
+MONGO_URI = os.environ.get("MONGO_URI", "")
+if not MONGO_URI:
+    raise RuntimeError("MONGO_URI environment variable is not set!")
 client = MongoClient(MONGO_URI)
 db = client['mithya_sports']
 slots_collection = db['available_slots']
@@ -25,8 +27,12 @@ pyqs_collection = db['pyqs_notes']
 contacts_collection = db['important_contacts']
 users_collection    = db['mithya_users']
 
-ADMIN_PASSWORD = os.environ.get("ADMIN_PASSWORD", "mithya_admin_123")
-SECRET_KEY     = os.environ.get("SECRET_KEY", "mithya_dev_secret_change_this")
+ADMIN_PASSWORD = os.environ.get("ADMIN_PASSWORD") or ""
+SECRET_KEY     = os.environ.get("SECRET_KEY") or ""
+if not SECRET_KEY:
+    raise RuntimeError("SECRET_KEY environment variable is not set!")
+if not ADMIN_PASSWORD:
+    raise RuntimeError("ADMIN_PASSWORD environment variable is not set!")
 
 # ==========================================
 # 🔐 JWT AUTH DECORATOR
@@ -88,24 +94,27 @@ def get_posts():
         return jsonify({"success": False, "message": str(e)})
 
 @app.route('/api/voice/posts', methods=['POST'])
+@require_auth
 def create_post():
     try:
-        data = request.json
-        if not data or not data.get('author'):
-            return jsonify({"success": False, "message": "Missing author"}), 400
-        if not data.get('text') and not data.get('image_url'):
+        data      = request.json or {}
+        auth_user = request.auth_user
+        text      = data.get('text', '').strip()[:2000]  # max 2000 chars
+        image_url = data.get('image_url')
+
+        if not text and not image_url:
             return jsonify({"success": False, "message": "Post must have text or an image"}), 400
-            
+
         new_post = {
-            "id": str(uuid.uuid4()),
-            "author": data.get('author'),
-            "text": data.get('text', '').strip(),
-            "image_url": data.get('image_url'), 
+            "id":        str(uuid.uuid4()),
+            "author":    auth_user['anon_name'],  # always from JWT, not user-supplied
+            "text":      text,
+            "image_url": image_url,
             "timestamp": utcnow(),
-            "likes": 0,
-            "dislikes": 0,
+            "likes":     0,
+            "dislikes":  0,
             "comments": [],
-            "reported": False
+            "reported":  False
         }
         
         voice_collection.insert_one(new_post)
@@ -127,7 +136,7 @@ def create_post():
 def add_comment(post_id):
     try:
         data      = request.json or {}
-        text      = data.get('text', '').strip()
+        text      = data.get('text', '').strip()[:500]  # max 500 chars per comment
         auth_user = request.auth_user  # from JWT
         user_id   = auth_user['user_id']
         anon_name = auth_user['anon_name']
@@ -138,13 +147,16 @@ def add_comment(post_id):
         # ── Rate limit: max 5 comments per hour ──────────────────────────────
         one_hour_ago = (datetime.now(timezone.utc) - timedelta(hours=1)).strftime('%Y-%m-%dT%H:%M:%SZ')
         user_doc     = users_collection.find_one({"id": user_id})
-        if user_doc:
-            recent = [t for t in user_doc.get('comment_timestamps', []) if t > one_hour_ago]
-            if len(recent) >= 5:
-                return jsonify({"success": False, "message": "⏰ You've hit the 5 comments/hour limit. Try again later!"}), 429
-            # Keep only last 20 timestamps to avoid bloat
-            updated = sorted(recent + [utcnow()])[-20:]
-            users_collection.update_one({"id": user_id}, {"$set": {"comment_timestamps": updated}})
+        recent       = [t for t in (user_doc or {}).get('comment_timestamps', []) if t > one_hour_ago]
+        if len(recent) >= 5:
+            return jsonify({"success": False, "message": "⏰ You've hit the 5 comments/hour limit. Try again later!"}), 429
+        # Keep last 20 timestamps; upsert handles missing user_doc
+        updated = sorted(recent + [utcnow()])[-20:]
+        users_collection.update_one(
+            {"id": user_id},
+            {"$set": {"comment_timestamps": updated}},
+            upsert=True
+        )
 
         new_comment = {
             "id":        str(uuid.uuid4()),
@@ -197,6 +209,7 @@ def get_lost_found_items():
         return jsonify({"success": False, "message": str(e)})
 
 @app.route('/api/lostfound', methods=['POST'])
+@require_auth
 def create_lost_found_item():
     try:
         data = request.json

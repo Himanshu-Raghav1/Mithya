@@ -2,7 +2,7 @@ services:
   - type: web
     name: mithya-api
     env: python
-    buildCommand: pip install -r requirements.txt && (playwright install-deps chromium || true) && playwright install chromium
+    buildCommand: pip install -r requirements.txt && playwright install chromium
     startCommand: ./start.sh
     plan: free
     healthCheckPath: /api/search
@@ -14,4 +14,6 @@ services:
       - key: ADMIN_PASSWORD
         sync: false
       - key: MONGO_URI
+        sync: false
+      - key: SECRET_KEY
         sync: false

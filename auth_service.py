@@ -22,8 +22,15 @@ CORS(app)
 SUPABASE_URL      = os.environ.get("SUPABASE_URL", "")
 SUPABASE_ANON_KEY = os.environ.get("SUPABASE_ANON_KEY", "")
 MONGO_URI         = os.environ.get("MONGO_URI", "")
-SECRET_KEY        = os.environ.get("SECRET_KEY", "mithya_dev_secret_change_this")
+SECRET_KEY        = os.environ.get("SECRET_KEY", "")
 TOKEN_EXPIRY_DAYS = 30
+
+if not SUPABASE_URL or not SUPABASE_ANON_KEY:
+    raise RuntimeError("SUPABASE_URL and SUPABASE_ANON_KEY must be set!")
+if not MONGO_URI:
+    raise RuntimeError("MONGO_URI must be set!")
+if not SECRET_KEY:
+    raise RuntimeError("SECRET_KEY must be set! Generate a strong random string.")
 
 # MongoDB connection
 client           = MongoClient(MONGO_URI)

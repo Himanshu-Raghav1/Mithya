@@ -74,12 +74,15 @@ export async function getForumPosts(): Promise<ApiResponse<ForumPost[]>> {
   }
 }
 
-export async function createForumPost(text: string, author: string, image_url?: string): Promise<ApiResponse<ForumPost>> {
+export async function createForumPost(text: string, token: string, image_url?: string): Promise<ApiResponse<ForumPost>> {
   try {
     const res = await fetch(`${API_BASE_URL}/api/voice/posts`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ text, author, image_url })
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`,
+      },
+      body: JSON.stringify({ text, image_url })  // author comes from JWT on backend
     });
     return await res.json() as ApiResponse<ForumPost>;
   } catch {
