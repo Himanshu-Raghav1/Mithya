@@ -99,6 +99,7 @@ export default function AuthModal({ onClose, reason }: AuthModalProps) {
             <div className="space-y-4 mt-4">
               <div>
                 <h2 className="text-xl font-black text-white">Sign in to Mithya 👋</h2>
+                <p className="text-white/40 text-xs mt-1 italic">Sorry yaar, spammers se bachne ke liye karna padega 🙏</p>
                 {reason && (
                   <p className="text-white/50 text-xs mt-1">Auth required <span className="text-yellow-400">{reason}</span></p>
                 )}
