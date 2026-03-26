@@ -130,11 +130,14 @@ export async function getLostFoundItems(): Promise<ApiResponse<any[]>> {
   }
 }
 
-export async function createLostFoundItem(payload: any): Promise<ApiResponse<any>> {
+export async function createLostFoundItem(payload: any, token: string): Promise<ApiResponse<any>> {
   try {
     const res = await fetch(`${API_BASE_URL}/api/lostfound`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`,
+      },
       body: JSON.stringify(payload)
     });
     return await res.json() as ApiResponse<any>;

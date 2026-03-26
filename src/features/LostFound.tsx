@@ -4,8 +4,12 @@ import { Search, Loader2, Upload, X, MessageCircle, AlertCircle, Plus, Image as 
 import { uploadToCloudinary } from '../services/cloudinary';
 import { getLostFoundItems, createLostFoundItem } from '../services/api';
 import type { LostItem } from '../types';
+import { useAuth } from '../context/AuthContext';
+import AuthModal from '../components/AuthModal';
 
 export default function LostFound() {
+  const { user, token } = useAuth();
+  const [showAuth, setShowAuth] = useState(false);
   const [items, setItems] = useState<LostItem[]>([]);
   const [isLoadingFeed, setIsLoadingFeed] = useState(true);
   const [filter, setFilter] = useState<'All' | 'Lost' | 'Found'>('All');
@@ -81,7 +85,7 @@ export default function LostFound() {
         image_url: cloudinaryUrl
       };
 
-      const res = await createLostFoundItem(payload);
+      const res = await createLostFoundItem(payload, token || '');
 
       if (!res.success) {
         throw new Error(res.message || "Failed to save to database");
@@ -143,6 +147,7 @@ export default function LostFound() {
 
   return (
     <div className="p-4 max-w-2xl mx-auto space-y-6 pb-24">
+      {showAuth && <AuthModal onClose={() => setShowAuth(false)} reason="to report a Lost or Found item" />}
       {/* Header & Controls */}
       <div className="glass-card p-5 space-y-4" style={{ background: 'rgba(255,255,255,0.05)' }}>
         <div className="flex items-center justify-between">
@@ -154,7 +159,7 @@ export default function LostFound() {
             </div>
           </div>
           <button
-            onClick={() => setIsModalOpen(true)}
+            onClick={() => { if (!user) { setShowAuth(true); } else { setIsModalOpen(true); } }}
             className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-bold text-white transition-transform hover:scale-105 active:scale-95"
             style={{ background: 'linear-gradient(135deg, #FFD740, #F9A825)', color: '#1a1a2e' }}
           >
