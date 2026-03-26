@@ -124,10 +124,16 @@ def send_otp():
     """
     try:
         data  = request.json or {}
-        email = data.get('email', '').strip().lower()
+        raw_email = data.get('email', '').strip().lower()
+        
+        # Auto-append domain if they just sent a PRN or Name
+        if '@' not in raw_email and len(raw_email) > 0:
+            email = f"{raw_email}@mitwpu.edu.in"
+        else:
+            email = raw_email
 
         if not email.endswith('@mitwpu.edu.in'):
-            return jsonify({"success": False, "message": "Only @mitwpu.edu.in emails are allowed 📧"}), 400
+            return jsonify({"success": False, "message": "Only @mitwpu.edu.in emails or PRN numbers are allowed 📧"}), 400
 
         # Check Supabase profiles table to determine if new/returning user
         existing_profile = get_profile_by_email(email)

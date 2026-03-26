@@ -36,14 +36,25 @@ export default function AuthModal({ onClose, reason }: AuthModalProps) {
 
   const handleSendOtp = async () => {
     setError('');
-    if (!email.trim()) return setError('Please enter your email');
-    if (!email.endsWith('@mitwpu.edu.in')) return setError('Only @mitwpu.edu.in emails are allowed');
+    let finalEmail = email.trim().toLowerCase();
+    
+    // Auto-append @mitwpu.edu.in if they just typed their PRN number or Name
+    if (!finalEmail.includes('@')) {
+      finalEmail = `${finalEmail}@mitwpu.edu.in`;
+    }
+
+    if (!finalEmail.endsWith('@mitwpu.edu.in')) {
+      return setError('Only @mitwpu.edu.in emails or PRN numbers are allowed');
+    }
+
     setIsLoading(true);
     try {
-      const res = await sendOtp(email.trim().toLowerCase());
+      const res = await sendOtp(finalEmail);
       if (!res.success) return setError(res.message);
       setStage(res.is_new ? 'otp-new' : 'otp-returning');
-    } catch { setError('Network error. Please try again.'); }
+    } catch { 
+      setError('Network error (Backend is sleeping or not configured). Please check your Render/Vercel URLs and try again.'); 
+    }
     finally { setIsLoading(false); }
   };
 
