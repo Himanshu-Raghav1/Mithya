@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Send, ThumbsUp, ThumbsDown, MessageCircle, Flag, ChevronDown, Loader2, Image as ImageIcon, X, Lock } from 'lucide-react';
+import { Send, ThumbsUp, ThumbsDown, MessageCircle, Flag, ChevronDown, Loader2, Image as ImageIcon, X } from 'lucide-react';
 import type { ForumPost, Comment } from '../types';
 import { getForumPosts, createForumPost, addComment, interactWithPost } from '../services/api';
 import { uploadToCloudinary } from '../services/cloudinary';
@@ -27,16 +27,6 @@ function NobitaMini() {
   );
 }
 
-// Helper to get a stable anonymous ID for the current device
-function getAnonymousId(): string {
-  const stored = localStorage.getItem('mithya_anon_id');
-  if (stored) return stored;
-  
-  const randomNum = Math.floor(1000 + Math.random() * 9000); // 4-digit number
-  const newId = `student_${randomNum}`;
-  localStorage.setItem('mithya_anon_id', newId);
-  return newId;
-}
 
 function timeAgo(dateString: string): string {
   const date = new Date(dateString);
@@ -209,7 +199,7 @@ export default function MITVoice() {
         />
         <div className="flex justify-between items-center pt-2">
           <div className="flex items-center gap-3">
-            <span className="text-white/40 text-xs">Posted as: <span className="text-blue-300 font-bold">{myAnonId}</span></span>
+            <span className="text-white/40 text-xs">Posted as: <span className="text-blue-300 font-bold">{user?.anon_name ?? 'anonymous'}</span></span>
             
             {/* Image Upload Button */}
             <div>
