@@ -159,6 +159,14 @@ def scrape_and_update_db(token):
                 start_time_str = slot.get('start_time', '')
                 end_time_str = slot.get('end_time', '')
                 
+                # 🛑 FIX 3: THE DATE CHECK
+                # If the slot is a full datetime string, ensure it is actually for TODAY!
+                # If it's for tomorrow (e.g., a weekend slot), we must skip it.
+                if 'T' in start_time_str:
+                    slot_date = start_time_str.split('T')[0]
+                    if slot_date != today_date:
+                        continue  # This slot is not for today! Skip it entirely.
+                        
                 try:
                     if 'T' in start_time_str:
                         time_part = start_time_str.split('T')[1].split('+')[0].split('Z')[0]
@@ -172,7 +180,7 @@ def scrape_and_update_db(token):
                 except Exception as e:
                     continue 
 
-                # Skip slots that have ALREADY started
+                # Skip slots that have ALREADY started real-time today
                 if slot_start_time < current_time:
                     continue 
 
