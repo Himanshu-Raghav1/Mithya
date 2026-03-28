@@ -11,7 +11,7 @@ def utcnow() -> str:
 app = Flask(__name__)
 # Allow Authorization header so the frontend can send JWT tokens
 CORS(app, 
-     origins=["https://mithya.vercel.app", "http://localhost:5173"], 
+     origins=["https://mithya.vercel.app", "http://localhost:5173", "https://mithya.social", "https://www.mithya.social"], 
      supports_credentials=True, 
      allow_headers=["Content-Type", "Authorization"])
 
