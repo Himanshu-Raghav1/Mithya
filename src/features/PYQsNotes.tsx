@@ -37,7 +37,8 @@ function DoraemonReading() {
 }
 
 const PROGRAMS: ProgramType[] = ['BTech', 'BCA', 'BBA', 'BA', 'B.com', 'BSc', 'B.des'];
-const SEMESTERS = ['1', '2', '3', '4'];
+const SEMESTERS = ['1', '2', '3', '4', '5', '6', '7', '8'];
+const CATEGORIES = ['PYQs', 'Notes', 'PPT or PDF'];
 
 export default function PYQsNotes() {
   const { user } = useAuth();
@@ -49,6 +50,7 @@ export default function PYQsNotes() {
   const [isLoading, setIsLoading] = useState(true);
   const [selectedProgram, setSelectedProgram] = useState<string>('All');
   const [selectedSemester, setSelectedSemester] = useState<string>('All');
+  const [selectedCategory, setSelectedCategory] = useState<string>('All');
   const [searchQuery, setSearchQuery] = useState('');
   const [debouncedSearch, setDebouncedSearch] = useState('');
 
@@ -59,6 +61,7 @@ export default function PYQsNotes() {
   const [linkUrl, setLinkUrl] = useState('');
   const [uploadProgram, setUploadProgram] = useState<ProgramType>('BTech');
   const [uploadSemester, setUploadSemester] = useState('1');
+  const [uploadCategory, setUploadCategory] = useState('PYQs');
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [isUploading, setIsUploading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -71,11 +74,11 @@ export default function PYQsNotes() {
 
   const loadPublicNotes = useCallback(async () => {
     setIsLoading(true);
-    const res = await getPyqs(selectedProgram, selectedSemester, debouncedSearch);
+    const res = await getPyqs(selectedProgram, selectedSemester, selectedCategory, debouncedSearch);
     if (res.success && res.data) setNotes(res.data);
     else setNotes([]);
     setIsLoading(false);
-  }, [selectedProgram, selectedSemester, debouncedSearch]);
+  }, [selectedProgram, selectedSemester, selectedCategory, debouncedSearch]);
 
   useEffect(() => {
     if (activeTab === 'feed') loadPublicNotes();
@@ -110,6 +113,7 @@ export default function PYQsNotes() {
         file_url: finalUrl,
         program: uploadProgram,
         semester: uploadSemester,
+        category: uploadCategory,
       });
 
       if (res.success) {
@@ -180,7 +184,7 @@ export default function PYQsNotes() {
           onClick={() => setActiveTab('feed')}
           className={`flex-1 py-2 rounded-xl text-sm font-bold z-10 transition-colors ${activeTab === 'feed' ? 'text-white' : 'text-white/50 hover:text-white/80'}`}
         >
-          📚 All Notes
+          📚 All PYQs and Notes
         </button>
         <button
           onClick={() => setActiveTab('upload')}
@@ -258,6 +262,26 @@ export default function PYQsNotes() {
             </div>
           </div>
 
+          {/* Category Filter */}
+          <div>
+            <p className="text-xs font-bold text-white/40 uppercase tracking-wider mb-2">Category</p>
+            <div className="flex gap-2 flex-wrap">
+              {(['All', ...CATEGORIES] as const).map(c => (
+                <button
+                  key={c}
+                  onClick={() => setSelectedCategory(c)}
+                  className={`px-4 py-1.5 rounded-xl text-xs font-bold transition-all border ${
+                    selectedCategory === c
+                      ? 'bg-green-500/20 text-green-300 border-green-400/40'
+                      : 'bg-white/5 text-white/50 border-white/10 hover:text-white/80'
+                  }`}
+                >
+                  {c}
+                </button>
+              ))}
+            </div>
+          </div>
+
           {/* Results */}
           {isLoading ? (
             <div className="text-center py-12">
@@ -291,6 +315,11 @@ export default function PYQsNotes() {
                         {note.semester && (
                           <span className="px-2 py-0.5 rounded text-[10px] font-black bg-purple-500/15 text-purple-300 border border-purple-500/25">
                             Sem {note.semester}
+                          </span>
+                        )}
+                        {note.category && (
+                          <span className="px-2 py-0.5 rounded text-[10px] font-black bg-green-500/15 text-green-300 border border-green-500/25">
+                            {note.category}
                           </span>
                         )}
                       </div>
@@ -358,6 +387,20 @@ export default function PYQsNotes() {
                 >
                   {SEMESTERS.map(s => (
                     <option key={s} value={s}>Semester {s}</option>
+                  ))}
+                </select>
+              </div>
+
+              {/* Category */}
+              <div>
+                <label className="text-xs font-bold text-green-300 ml-1">Category *</label>
+                <select
+                  value={uploadCategory}
+                  onChange={e => setUploadCategory(e.target.value)}
+                  className="w-full mt-1 bg-black/30 border border-white/10 rounded-xl px-4 py-3 text-white outline-none focus:border-green-400 cursor-pointer"
+                >
+                  {CATEGORIES.map(c => (
+                    <option key={c} value={c}>{c}</option>
                   ))}
                 </select>
               </div>

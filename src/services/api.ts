@@ -179,12 +179,14 @@ export async function createEvent(payload: Partial<import('../types').EventItem>
 export async function getPyqs(
   program?: string,
   semester?: string,
+  category?: string,
   search?: string
 ): Promise<ApiResponse<any[]>> {
   try {
     const params = new URLSearchParams();
     if (program && program !== 'All') params.append('program', program);
     if (semester && semester !== 'All') params.append('semester', semester);
+    if (category && category !== 'All') params.append('category', category);
     if (search && search.trim()) params.append('search', search.trim());
     const query = params.toString() ? `?${params.toString()}` : '';
     const res = await fetch(`${API_BASE_URL}/api/pyqs${query}`);

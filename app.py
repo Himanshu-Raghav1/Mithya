@@ -291,12 +291,15 @@ def get_pyqs():
         query = {"is_approved": True}
         program = request.args.get('program')
         semester = request.args.get('semester')
+        category = request.args.get('category')
         search = request.args.get('search', '').strip()
 
         if program and program != 'All':
             query['program'] = program
         if semester and semester != 'All':
             query['semester'] = semester
+        if category and category != 'All':
+            query['category'] = category
         if search:
             query['$or'] = [
                 {'title': {'$regex': search, '$options': 'i'}},
@@ -324,6 +327,7 @@ def submit_pyq():
             "file_url": data.get('file_url', '').strip(),
             "program": data.get('program', 'BTech').strip(),
             "semester": data.get('semester', '1').strip(),
+            "category": data.get('category', 'notes').strip(),
             "is_approved": False,
             "timestamp": utcnow()
         }
