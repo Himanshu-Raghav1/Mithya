@@ -31,6 +31,11 @@ pyqs_collection = db['pyqs_notes']
 contacts_collection = db['important_contacts']
 users_collection    = db['mithya_users']
 
+# Personalized Space Collections
+user_storage_collection = db['user_storage']
+private_deadlines_collection = db['private_deadlines']
+ur_money_collection = db['ur_money']
+
 ADMIN_PASSWORD = os.environ.get("ADMIN_PASSWORD") or ""
 SECRET_KEY     = os.environ.get("SECRET_KEY") or ""
 if not SECRET_KEY:
@@ -442,6 +447,121 @@ def create_contact():
         return jsonify({"success": True, "data": new_contact})
     except Exception as e:
         return jsonify({"success": False, "message": str(e)})
+
+# ==========================================
+# 🔐 PERSONALIZED SPACE (DEADLINES & UR MONEY)
+# ==========================================
+
+@app.route('/api/private/deadlines', methods=['GET'])
+@require_auth
+def get_private_deadlines():
+    user_id = request.auth_user.get('user_id')
+    deadlines = list(private_deadlines_collection.find({"auth_uid": user_id}, {"_id": 0}).sort("date", 1))
+    return jsonify({"success": True, "data": deadlines})
+
+@app.route('/api/private/deadlines', methods=['POST'])
+@require_auth
+def add_private_deadline():
+    try:
+        data = request.json
+        user_id = request.auth_user.get('user_id')
+        file_size = data.get('file_size_bytes', 0) 
+        
+        # 1. 🛑 STRICT STORAGE LIMIT CHECK (30MB)
+        storage_record = user_storage_collection.find_one({"auth_uid": user_id})
+        current_used = storage_record['bytes_used'] if storage_record else 0
+        
+        if (current_used + file_size) > (30 * 1024 * 1024):
+            # EXACT MATCH TO USER'S REQUESTED ERROR STRING
+            return jsonify({"success": False, "message": "your personal data limit excedded delete previous one"}), 403
+            
+        # 2. Add the Deadline
+        new_dl = {
+            "id": str(uuid.uuid4()),
+            "auth_uid": user_id,
+            "title": data.get('title'),
+            "type": data.get('type'),
+            "date": data.get('date'),
+            "file_url": data.get('file_url', ''),
+            "file_size": file_size,
+            "timestamp": utcnow()
+        }
+        private_deadlines_collection.insert_one(new_dl)
+        
+        # 3. Update Storage Tracker
+        user_storage_collection.update_one(
+            {"auth_uid": user_id}, 
+            {"$inc": {"bytes_used": file_size}}, 
+            upsert=True
+        )
+        
+        new_dl.pop('_id', None)
+        return jsonify({"success": True, "data": new_dl})
+    except Exception as e:
+        return jsonify({"success": False, "message": str(e)}), 500
+
+@app.route('/api/private/deadlines/<dl_id>', methods=['DELETE'])
+@require_auth
+def delete_private_deadline(dl_id):
+    user_id = request.auth_user.get('user_id')
+    dl = private_deadlines_collection.find_one({"id": dl_id, "auth_uid": user_id})
+    if not dl:
+        return jsonify({"success": False, "message": "Not found"}), 404
+        
+    private_deadlines_collection.delete_one({"id": dl_id})
+    
+    # Subtract storage
+    file_size = dl.get('file_size', 0)
+    if file_size > 0:
+        user_storage_collection.update_one(
+            {"auth_uid": user_id},
+            {"$inc": {"bytes_used": -file_size}}
+        )
+    return jsonify({"success": True, "message": "Deleted"})
+
+# --- UR MONEY ENDPOINTS --- #
+
+@app.route('/api/private/finance', methods=['GET'])
+@require_auth
+def get_finance():
+    user_id = request.auth_user.get('user_id')
+    finance = ur_money_collection.find_one({"auth_uid": user_id}, {"_id": 0})
+    if not finance:
+        finance = {"auth_uid": user_id, "budget": 0, "month_start": "", "expenses": []}
+    return jsonify({"success": True, "data": finance})
+
+@app.route('/api/private/finance/budget', methods=['POST'])
+@require_auth
+def set_budget():
+    data = request.json
+    user_id = request.auth_user.get('user_id')
+    ur_money_collection.update_one(
+        {"auth_uid": user_id},
+        {"$set": {
+            "budget": data.get('budget', 0),
+            "month_start": data.get('month_start', '')
+        }},
+        upsert=True
+    )
+    return jsonify({"success": True, "message": "Budget set!"})
+
+@app.route('/api/private/finance/expense', methods=['POST'])
+@require_auth
+def add_expense():
+    data = request.json
+    user_id = request.auth_user.get('user_id')
+    expense = {
+        "id": str(uuid.uuid4()),
+        "title": data.get('title'),
+        "amount": float(data.get('amount', 0)),
+        "date": utcnow()
+    }
+    ur_money_collection.update_one(
+        {"auth_uid": user_id},
+        {"$push": {"expenses": {"$each": [expense], "$position": 0}}},
+        upsert=True
+    )
+    return jsonify({"success": True, "data": expense})
 
 
 if __name__ == '__main__':

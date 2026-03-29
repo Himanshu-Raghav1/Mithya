@@ -290,3 +290,80 @@ export async function deleteContact(contactId: string): Promise<ApiResponse<any>
     return { success: false, message: 'Failed to delete contact' };
   }
 }
+
+// ==========================================
+// 🔐 PRIVATE SPACE (DEADLINES & UR MONEY)
+// ==========================================
+
+export async function getPrivateDeadlines(token: string): Promise<ApiResponse<any[]>> {
+  try {
+    const res = await fetch(`${API_BASE_URL}/api/private/deadlines`, {
+      headers: { 'Authorization': `Bearer ${token}` }
+    });
+    return await res.json();
+  } catch {
+    return { success: false, message: 'Failed to fetch deadlines' };
+  }
+}
+
+export async function submitPrivateDeadline(payload: any, token: string): Promise<ApiResponse<any>> {
+  try {
+    const res = await fetch(`${API_BASE_URL}/api/private/deadlines`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+      body: JSON.stringify(payload)
+    });
+    return await res.json();
+  } catch {
+    return { success: false, message: 'Failed to save deadline' };
+  }
+}
+
+export async function deletePrivateDeadline(dlId: string, token: string): Promise<ApiResponse<any>> {
+  try {
+    const res = await fetch(`${API_BASE_URL}/api/private/deadlines/${dlId}`, {
+      method: 'DELETE',
+      headers: { 'Authorization': `Bearer ${token}` }
+    });
+    return await res.json();
+  } catch {
+    return { success: false, message: 'Failed to delete' };
+  }
+}
+
+export async function getUrMoney(token: string): Promise<ApiResponse<any>> {
+  try {
+    const res = await fetch(`${API_BASE_URL}/api/private/finance`, {
+      headers: { 'Authorization': `Bearer ${token}` }
+    });
+    return await res.json();
+  } catch {
+    return { success: false, message: 'Failed to fetch finance' };
+  }
+}
+
+export async function setUrMoneyBudget(budget: number, month_start: string, token: string): Promise<ApiResponse<any>> {
+  try {
+    const res = await fetch(`${API_BASE_URL}/api/private/finance/budget`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+      body: JSON.stringify({ budget, month_start })
+    });
+    return await res.json();
+  } catch {
+    return { success: false, message: 'Failed to set budget' };
+  }
+}
+
+export async function addUrMoneyExpense(title: string, amount: number, token: string): Promise<ApiResponse<any>> {
+  try {
+    const res = await fetch(`${API_BASE_URL}/api/private/finance/expense`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+      body: JSON.stringify({ title, amount })
+    });
+    return await res.json();
+  } catch {
+    return { success: false, message: 'Failed to add expense' };
+  }
+}

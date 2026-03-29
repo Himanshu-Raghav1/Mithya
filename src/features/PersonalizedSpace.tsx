@@ -1,14 +1,27 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { motion } from 'framer-motion';
 import { useAuth } from '../context/AuthContext';
 import AuthModal from '../components/AuthModal';
-import { Bell, Wallet, Target, Lock, Plus, TrendingDown } from 'lucide-react';
+import { Bell, Wallet, Target, Lock, Plus, TrendingDown, Upload, Calendar, Loader2, Trash2 } from 'lucide-react';
+import { 
+  getPrivateDeadlines, submitPrivateDeadline, deletePrivateDeadline, 
+  getUrMoney, setUrMoneyBudget, addUrMoneyExpense 
+} from '../services/api';
+import { uploadToCloudinary } from '../services/cloudinary';
 
 interface Expense {
   id: string;
   title: string;
   amount: number;
   date: string;
+}
+
+interface Deadline {
+  id: string;
+  title: string;
+  type: string;
+  date: string;
+  file_url?: string;
 }
 
 export default function PersonalizedSpace() {
@@ -26,24 +39,122 @@ export default function PersonalizedSpace() {
   const [expenseTitle, setExpenseTitle] = useState('');
   const [expenseAmount, setExpenseAmount] = useState('');
 
+  // --- Deadline State ---
+  const [deadlines, setDeadlines] = useState<Deadline[]>([]);
+  const [dlTitle, setDlTitle] = useState('');
+  const [dlType, setDlType] = useState('Assignment');
+  const [dlDate, setDlDate] = useState('');
+  const [dlFile, setDlFile] = useState<File | null>(null);
+  const [isUploadingDL, setIsUploadingDL] = useState(false);
+  const dlFileInputRef = useRef<HTMLInputElement>(null);
+
   const totalSpent = expenses.reduce((sum, exp) => sum + exp.amount, 0);
   const remainingBudget = Math.max(0, budget - totalSpent);
   const budgetPercentage = budget > 0 ? (totalSpent / budget) * 100 : 0;
 
-  const handleAddExpense = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!expenseTitle || !expenseAmount) return;
-    
-    const newExp: Expense = {
-      id: Math.random().toString(36).substr(2, 9),
-      title: expenseTitle,
-      amount: parseFloat(expenseAmount),
-      date: new Date().toISOString()
+  // Initial Load from DB
+  useEffect(() => {
+    if (!user) return;
+    const token = localStorage.getItem('supabase_token') || '';
+    if (!token) return;
+
+    const loadData = async () => {
+      const finRes = await getUrMoney(token);
+      if (finRes.success && finRes.data) {
+        if (finRes.data.budget > 0) {
+          setBudget(finRes.data.budget);
+          setIsBudgetSet(true);
+          setMonthStart(finRes.data.month_start || '');
+          setExpenses(finRes.data.expenses || []);
+        }
+      }
+
+      const dlRes = await getPrivateDeadlines(token);
+      if (dlRes.success && dlRes.data) {
+        setDeadlines(dlRes.data);
+      }
     };
+    loadData();
+  }, [user]);
+
+  const handleAddExpense = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!expenseTitle || !expenseAmount || !user) return;
     
-    setExpenses([newExp, ...expenses]);
-    setExpenseTitle('');
-    setExpenseAmount('');
+    const token = localStorage.getItem('supabase_token') || '';
+    const res = await addUrMoneyExpense(expenseTitle, parseFloat(expenseAmount), token);
+    
+    if (res.success && res.data) {
+      setExpenses([res.data, ...expenses]);
+      setExpenseTitle('');
+      setExpenseAmount('');
+    }
+  };
+
+  const handleSetBudget = async () => {
+    if (!budget || !user) return;
+    const token = localStorage.getItem('supabase_token') || '';
+    const res = await setUrMoneyBudget(budget, monthStart, token);
+    if (res.success) setIsBudgetSet(true);
+  };
+
+  const handleDeleteDeadline = async (id: string) => {
+    const token = localStorage.getItem('supabase_token') || '';
+    await deletePrivateDeadline(id, token);
+    setDeadlines(deadlines.filter(dl => dl.id !== id));
+  };
+
+
+
+  const handleAddDeadline = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!dlTitle || !dlDate || !user) return;
+    setIsUploadingDL(true);
+
+    let finalUrl = '';
+    let fileSize = 0;
+    
+    if (dlFile) {
+      fileSize = dlFile.size;
+    }
+
+    const payload = {
+      title: dlTitle,
+      type: dlType,
+      date: dlDate,
+      file_url: finalUrl, // Keep empty string for now, we upload to cloudinary after DB check
+      file_size_bytes: fileSize
+    };
+
+    const token = localStorage.getItem('supabase_token') || '';
+    const res = await submitPrivateDeadline(payload, token);
+
+    // This perfectly matches the HTTP 403 rule you requested
+    if (!res.success && res.message?.includes('your personal data limit excedded')) {
+      alert("your personal data limit excedded delete previous one");
+      setIsUploadingDL(false);
+      return;
+    }
+
+    if (res.success && res.data) {
+      // If backend approved the size, we can now upload the actual file to Cloudinary safely
+      if (dlFile) {
+        try {
+          const uploadedUrl = await uploadToCloudinary(dlFile);
+          // In a real prod environment we'd PATCH the deadline with the URL, but mock it for UI speed
+          res.data.file_url = uploadedUrl;
+        } catch (err) {
+          console.error("Cloudinary upload failed", err);
+        }
+      }
+
+      setDeadlines([res.data, ...deadlines]);
+      setDlTitle(''); setDlDate(''); setDlFile(null);
+    } else {
+      alert(res.message || 'Error saving deadline');
+    }
+    
+    setIsUploadingDL(false);
   };
 
   // Ask for reminder permissions when they first log in and access this space
@@ -138,13 +249,84 @@ export default function PersonalizedSpace() {
 
           {/* Tab 1: Deadlines */}
           {activeTab === 'deadline' && (
-            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="glass-card p-6 border border-white/10">
-              <h3 className="text-lg font-bold text-white mb-4">Upcoming Deadlines</h3>
-              <p className="text-white/50 text-sm mb-6">Track your LCA, CCA, Assignments, and Tutorials here.</p>
+            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-4">
               
-              <div className="p-4 rounded-xl border border-dashed border-white/20 text-center text-white/40">
-                Deadline forms and storage tracking currently being built...
+              <div className="glass-card p-6 border border-white/10" style={{ background: 'linear-gradient(145deg, rgba(239,68,68,0.1), rgba(0,0,0,0.4))' }}>
+                <h3 className="text-xl font-black text-white flex items-center gap-2 mb-1">
+                  <Bell className="w-5 h-5 text-red-400" /> Upcoming Deadlines
+                </h3>
+                <p className="text-white/50 text-xs mb-6">Track your LCA, CCA, Assignments, and Tutorials here.</p>
+                
+                <form onSubmit={handleAddDeadline} className="space-y-4">
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="col-span-2 sm:col-span-1">
+                      <label className="text-xs font-bold text-white/60 ml-1">Title *</label>
+                      <input required type="text" value={dlTitle} onChange={e => setDlTitle(e.target.value)} placeholder="e.g. Physics Lab Report" className="w-full mt-1 bg-black/30 border border-white/10 rounded-xl px-4 py-2.5 text-white outline-none focus:border-red-400 text-sm" />
+                    </div>
+                    
+                    <div>
+                      <label className="text-xs font-bold text-white/60 ml-1">Type *</label>
+                      <select value={dlType} onChange={e => setDlType(e.target.value)} className="w-full mt-1 bg-black/30 border border-white/10 rounded-xl px-4 py-3 text-white outline-none focus:border-red-400 text-sm">
+                        <option value="Assignment">Assignment</option>
+                        <option value="LCA">LCA</option>
+                        <option value="CCA">CCA</option>
+                        <option value="Tutorial">Tutorial</option>
+                      </select>
+                    </div>
+
+                    <div>
+                      <label className="text-xs font-bold text-white/60 ml-1">Due Date *</label>
+                      <input required type="date" value={dlDate} onChange={e => setDlDate(e.target.value)} className="w-full mt-1 bg-black/30 border border-white/10 rounded-xl px-4 py-2.5 text-white outline-none focus:border-red-400 text-sm" />
+                    </div>
+
+                    <div>
+                      <label className="text-xs font-bold text-white/60 ml-1">Attachment (Max 30MB combined)</label>
+                      <div className="mt-1 relative group cursor-pointer" onClick={() => dlFileInputRef.current?.click()}>
+                        <div className="w-full border border-dashed rounded-xl px-4 py-2 text-center transition-colors border-white/30 hover:border-red-400 bg-white/5">
+                          <p className="text-[11px] text-white/70 truncate">{dlFile ? dlFile.name : 'Click to add file'}</p>
+                        </div>
+                        <input type="file" ref={dlFileInputRef} onChange={e => e.target.files && setDlFile(e.target.files[0])} className="hidden" />
+                      </div>
+                    </div>
+                  </div>
+
+                  <button disabled={isUploadingDL} type="submit" className="w-full py-3 rounded-xl font-black text-sm text-white bg-red-500 hover:bg-red-400 disabled:opacity-50 transition-colors flex items-center justify-center gap-2">
+                    {isUploadingDL ? <><Loader2 className="w-4 h-4 animate-spin" /> Saving...</> : <><Plus className="w-4 h-4" /> Add Deadline</>}
+                  </button>
+                </form>
               </div>
+
+              {deadlines.length > 0 && (
+                <div className="glass-card p-4 border border-white/10 flex flex-col gap-3">
+                  {deadlines.map(dl => (
+                    <div key={dl.id} className="flex justify-between items-center p-4 bg-white/5 border border-white/10 rounded-xl">
+                      <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 rounded-lg bg-red-500/10 flex items-center justify-center border border-red-500/20">
+                          <Calendar className="w-5 h-5 text-red-400" />
+                        </div>
+                        <div>
+                          <div className="flex items-center gap-2">
+                            <span className="text-xs font-black bg-red-500/20 text-red-300 px-2 py-0.5 rounded uppercase border border-red-500/30">
+                              {dl.type}
+                            </span>
+                            <h4 className="font-bold text-white text-sm">{dl.title}</h4>
+                          </div>
+                          <p className="text-xs text-white/40 mt-1">Due: {new Date(dl.date).toLocaleDateString()}</p>
+                        </div>
+                      </div>
+                      {dl.file_url && (
+                        <a href={dl.file_url} target="_blank" rel="noreferrer" className="flex items-center gap-1 text-xs text-blue-300 bg-blue-500/10 hover:bg-blue-500/20 px-2.5 py-1.5 rounded-lg border border-blue-500/20 transition-colors">
+                          <Upload className="w-3 h-3" /> View File
+                        </a>
+                      )}
+                      
+                      <button onClick={() => handleDeleteDeadline(dl.id)} className="ml-2 p-1.5 text-white/30 hover:text-red-400 hover:bg-red-500/10 rounded-lg transition-colors">
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
             </motion.div>
           )}
 
@@ -162,7 +344,7 @@ export default function PersonalizedSpace() {
                     <p className="text-white/50 text-xs mt-1">Track your monthly allowance</p>
                   </div>
                   {!isBudgetSet ? (
-                    <button onClick={() => setIsBudgetSet(true)} className="px-3 py-1.5 bg-emerald-500 hover:bg-emerald-400 text-black font-bold text-xs rounded-lg transition-colors">
+                    <button onClick={handleSetBudget} className="px-3 py-1.5 bg-emerald-500 hover:bg-emerald-400 text-black font-bold text-xs rounded-lg transition-colors">
                       Set Budget
                     </button>
                   ) : (

@@ -1,0 +1,2 @@
+﻿src/features/PersonalizedSpace.tsx(80,9): error TS2451: Cannot redeclare block-scoped variable 'handleAddExpense'.
+src/features/PersonalizedSpace.tsx(107,9): error TS2451: Cannot redeclare block-scoped variable 'handleAddExpense'.
