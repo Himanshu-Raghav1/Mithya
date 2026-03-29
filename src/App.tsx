@@ -12,6 +12,7 @@ import ImportantContacts from './features/ImportantContacts';
 import LostFound from './features/LostFound';
 import PYQsNotes from './features/PYQsNotes';
 import AdminPortal from './features/AdminPortal';
+import PersonalizedSpace from './features/PersonalizedSpace';
 
 import type { TabId } from './types';
 
@@ -30,6 +31,7 @@ export default function App() {
       case 'contacts': return <ImportantContacts />;
       case 'lostfound':return <LostFound />;
       case 'pyqs':     return <PYQsNotes />;
+      case 'personalized': return <PersonalizedSpace />;
       case 'admin':    return <AdminPortal />;
     }
   };

@@ -103,7 +103,8 @@ export type TabId =
   | 'contacts'
   | 'lostfound'
   | 'pyqs'
-  | 'admin';
+  | 'admin'
+  | 'personalized';
 
 /** A PYQ / Note submission */
 export interface PyqNote {

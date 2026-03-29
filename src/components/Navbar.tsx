@@ -17,6 +17,7 @@ const tabs: { id: TabId; label: string; emoji: string }[] = [
   { id: 'contacts', label: 'Contacts', emoji: '📞' },
   { id: 'lostfound', label: 'Lost & Found', emoji: '🔍' },
   { id: 'pyqs', label: 'PYQs & Notes', emoji: '📚' },
+  { id: 'personalized', label: 'Private Space', emoji: '🔐' },
   { id: 'admin', label: 'Admin Portal', emoji: '🔒' }
 ];
 
