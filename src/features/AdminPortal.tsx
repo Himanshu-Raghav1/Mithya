@@ -41,7 +41,8 @@ export default function AdminPortal() {
     e.preventDefault();
     setAuthLoading(true);
     const res = await verifyAdmin(username, password);
-    if (res.success) {
+    if (res.success && res.token) {
+      sessionStorage.setItem('admin_token', res.token);
       setIsAuthenticated(true);
       loadPyqs(); // Load initial data
     } else {
@@ -53,7 +54,8 @@ export default function AdminPortal() {
   // --- Loaders ---
   const loadPyqs = async () => {
     setLoadingPyqs(true);
-    const res = await getPendingPyqs();
+    const token = sessionStorage.getItem('admin_token') || '';
+    const res = await getPendingPyqs(token);
     if (res.success && res.data) setPendingNotes(res.data);
     setLoadingPyqs(false);
   };
@@ -82,7 +84,8 @@ export default function AdminPortal() {
 
   // --- Actions ---
   const handleModeratePyq = async (id: string, action: 'approve' | 'reject') => {
-    const res = await moderatePyq(id, action);
+    const token = sessionStorage.getItem('admin_token') || '';
+    const res = await moderatePyq(id, action, token);
     if (res.success) {
       setPendingNotes(prev => prev.filter(n => n.id !== id));
     }
@@ -90,7 +93,8 @@ export default function AdminPortal() {
 
   const handleDeletePost = async (id: string) => {
     if (!confirm("Are you sure you want to delete this post instantly?")) return;
-    const res = await deleteVoicePost(id);
+    const token = sessionStorage.getItem('admin_token') || '';
+    const res = await deleteVoicePost(id, token);
     if (res.success) {
       setPosts(prev => prev.filter(p => p.id !== id));
     }
@@ -98,7 +102,8 @@ export default function AdminPortal() {
 
   const handleDeleteComment = async (postId: string, commentId: string) => {
     if (!confirm("Delete this comment?")) return;
-    const res = await deleteVoiceComment(postId, commentId);
+    const token = sessionStorage.getItem('admin_token') || '';
+    const res = await deleteVoiceComment(postId, commentId, token);
     if (res.success) {
       setPosts(prev => prev.map(p => {
         if (p.id === postId) {
@@ -114,8 +119,9 @@ export default function AdminPortal() {
     if (!cName || !cCategory) return;
     
     // Optimistic UI for form reset
+    const token = sessionStorage.getItem('admin_token') || '';
     const payload: Partial<Contact> = { name: cName, role: cRole, department: cDept, email: cEmail, phone: cPhone, category: cCategory };
-    const res = await createContact(payload);
+    const res = await createContact(payload, token);
     if (res.success && res.data) {
       setContacts([...contacts, res.data]);
       setCName(''); setCRole(''); setCDept(''); setCEmail(''); setCPhone('');
@@ -124,7 +130,8 @@ export default function AdminPortal() {
 
   const handleDeleteContact = async (id: string) => {
     if (!confirm("Remove this contact from the public directory?")) return;
-    const res = await deleteContact(id);
+    const token = sessionStorage.getItem('admin_token') || '';
+    const res = await deleteContact(id, token);
     if (res.success) {
       setContacts(prev => prev.filter(c => c.id !== id));
     }

@@ -62,6 +62,22 @@ def require_auth(f):
         return f(*args, **kwargs)
     return decorated
 
+def require_admin(f):
+    @wraps(f)
+    def decorated(*args, **kwargs):
+        token = request.headers.get('Authorization', '').replace('Bearer ', '')
+        if not token:
+            return jsonify({"success": False, "message": "Admin login required"}), 401
+        try:
+            payload = jwt.decode(token, SECRET_KEY, algorithms=["HS256"])
+            if payload.get('role') != 'admin':
+                return jsonify({"success": False, "message": "Access Denied: Not an admin"}), 403
+            request.admin_user = payload
+        except Exception as e:
+            return jsonify({"success": False, "message": "Invalid admin token"}), 401
+        return f(*args, **kwargs)
+    return decorated
+
 # ==========================================
 # 🌐 THE PUBLIC API - LIVE SPORTS
 # ==========================================
@@ -358,13 +374,20 @@ def verify_admin():
         password = data.get('password', '')
         
         if username == 'Himu' and password == ADMIN_PASSWORD:
-            return jsonify({"success": True, "message": "Access Granted"})
+            payload = {
+                "user_id": "admin",
+                "role": "admin",
+                "exp": datetime.now(timezone.utc) + timedelta(hours=24)
+            }
+            token = jwt.encode(payload, SECRET_KEY, algorithm="HS256")
+            return jsonify({"success": True, "message": "Access Granted", "token": token})
         else:
             return jsonify({"success": False, "message": "Invalid credentials"}), 401
     except Exception as e:
         return jsonify({"success": False, "message": str(e)})
 
 @app.route('/api/admin/pending_pyqs', methods=['GET'])
+@require_admin
 def get_pending_pyqs():
     try:
         pending_notes = list(pyqs_collection.find({"is_approved": False}, {"_id": 0}).sort("timestamp", -1))
@@ -373,6 +396,7 @@ def get_pending_pyqs():
         return jsonify({"success": False, "message": str(e)})
 
 @app.route('/api/admin/pyqs/<note_id>/<action>', methods=['PUT'])
+@require_admin
 def moderate_pyq(note_id, action):
     try:
         if action == 'approve':
@@ -392,6 +416,7 @@ def moderate_pyq(note_id, action):
         return jsonify({"success": False, "message": str(e)})
 
 @app.route('/api/admin/voice/posts/<post_id>', methods=['DELETE'])
+@require_admin
 def admin_delete_post(post_id):
     try:
         result = voice_collection.delete_one({"id": post_id})
@@ -402,6 +427,7 @@ def admin_delete_post(post_id):
         return jsonify({"success": False, "message": str(e)})
 
 @app.route('/api/admin/voice/posts/<post_id>/comments/<comment_id>', methods=['DELETE'])
+@require_admin
 def admin_delete_comment(post_id, comment_id):
     try:
         result = voice_collection.update_one(
@@ -426,6 +452,7 @@ def get_contacts():
         return jsonify({"success": False, "message": str(e)})
 
 @app.route('/api/admin/contacts', methods=['POST'])
+@require_admin
 def create_contact():
     try:
         data = request.json
@@ -445,6 +472,17 @@ def create_contact():
         contacts_collection.insert_one(new_contact)
         new_contact.pop('_id', None)
         return jsonify({"success": True, "data": new_contact})
+    except Exception as e:
+        return jsonify({"success": False, "message": str(e)})
+
+@app.route('/api/admin/contacts/<contact_id>', methods=['DELETE'])
+@require_admin
+def delete_contact(contact_id):
+    try:
+        result = contacts_collection.delete_one({"id": contact_id})
+        if result.deleted_count == 0:
+            return jsonify({"success": False, "message": "Contact not found"}), 404
+        return jsonify({"success": True, "message": "Contact deleted"})
     except Exception as e:
         return jsonify({"success": False, "message": str(e)})
 

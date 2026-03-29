@@ -222,19 +222,22 @@ export async function verifyAdmin(username: string, password: string): Promise<A
   }
 }
 
-export async function getPendingPyqs(): Promise<ApiResponse<any[]>> {
+export async function getPendingPyqs(token: string): Promise<ApiResponse<any[]>> {
   try {
-    const res = await fetch(`${API_BASE_URL}/api/admin/pending_pyqs`);
+    const res = await fetch(`${API_BASE_URL}/api/admin/pending_pyqs`, {
+      headers: { 'Authorization': `Bearer ${token}` }
+    });
     return await res.json() as ApiResponse<any[]>;
   } catch {
     return { success: false, message: 'Failed to fetch pending notes' };
   }
 }
 
-export async function moderatePyq(noteId: string, action: 'approve' | 'reject'): Promise<ApiResponse<any>> {
+export async function moderatePyq(noteId: string, action: 'approve' | 'reject', token: string): Promise<ApiResponse<any>> {
   try {
     const res = await fetch(`${API_BASE_URL}/api/admin/pyqs/${noteId}/${action}`, {
-      method: 'PUT'
+      method: 'PUT',
+      headers: { 'Authorization': `Bearer ${token}` }
     });
     return await res.json() as ApiResponse<any>;
   } catch {
@@ -242,18 +245,24 @@ export async function moderatePyq(noteId: string, action: 'approve' | 'reject'):
   }
 }
 
-export async function deleteVoicePost(postId: string): Promise<ApiResponse<any>> {
+export async function deleteVoicePost(postId: string, token: string): Promise<ApiResponse<any>> {
   try {
-    const res = await fetch(`${API_BASE_URL}/api/admin/voice/posts/${postId}`, { method: 'DELETE' });
+    const res = await fetch(`${API_BASE_URL}/api/admin/voice/posts/${postId}`, { 
+      method: 'DELETE',
+      headers: { 'Authorization': `Bearer ${token}` }
+    });
     return await res.json();
   } catch {
     return { success: false, message: 'Failed to delete post' };
   }
 }
 
-export async function deleteVoiceComment(postId: string, commentId: string): Promise<ApiResponse<any>> {
+export async function deleteVoiceComment(postId: string, commentId: string, token: string): Promise<ApiResponse<any>> {
   try {
-    const res = await fetch(`${API_BASE_URL}/api/admin/voice/posts/${postId}/comments/${commentId}`, { method: 'DELETE' });
+    const res = await fetch(`${API_BASE_URL}/api/admin/voice/posts/${postId}/comments/${commentId}`, { 
+      method: 'DELETE',
+      headers: { 'Authorization': `Bearer ${token}` }
+    });
     return await res.json();
   } catch {
     return { success: false, message: 'Failed to delete comment' };
@@ -269,11 +278,11 @@ export async function getContacts(): Promise<ApiResponse<import('../types').Cont
   }
 }
 
-export async function createContact(payload: Partial<import('../types').Contact>): Promise<ApiResponse<import('../types').Contact>> {
+export async function createContact(payload: Partial<import('../types').Contact>, token: string): Promise<ApiResponse<import('../types').Contact>> {
   try {
     const res = await fetch(`${API_BASE_URL}/api/admin/contacts`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
       body: JSON.stringify(payload)
     });
     return await res.json();
@@ -282,9 +291,12 @@ export async function createContact(payload: Partial<import('../types').Contact>
   }
 }
 
-export async function deleteContact(contactId: string): Promise<ApiResponse<any>> {
+export async function deleteContact(contactId: string, token: string): Promise<ApiResponse<any>> {
   try {
-    const res = await fetch(`${API_BASE_URL}/api/admin/contacts/${contactId}`, { method: 'DELETE' });
+    const res = await fetch(`${API_BASE_URL}/api/admin/contacts/${contactId}`, { 
+      method: 'DELETE',
+      headers: { 'Authorization': `Bearer ${token}` }
+    });
     return await res.json();
   } catch {
     return { success: false, message: 'Failed to delete contact' };
