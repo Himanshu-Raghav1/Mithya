@@ -1,0 +1,1 @@
+﻿src/features/PersonalizedSpace.tsx(5,38): error TS6133: 'AlertCircle' is declared but its value is never read.
