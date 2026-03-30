@@ -55,7 +55,7 @@ export default function PersonalizedSpace() {
   // Initial Load from DB
   useEffect(() => {
     if (!user) return;
-    const token = localStorage.getItem('supabase_token') || '';
+    const token = localStorage.getItem('mithya_token') || '';
     if (!token) return;
 
     const loadData = async () => {
@@ -81,7 +81,7 @@ export default function PersonalizedSpace() {
     e.preventDefault();
     if (!expenseTitle || !expenseAmount || !user) return;
     
-    const token = localStorage.getItem('supabase_token') || '';
+    const token = localStorage.getItem('mithya_token') || '';
     const res = await addUrMoneyExpense(expenseTitle, parseFloat(expenseAmount), token);
     
     if (res.success && res.data) {
@@ -93,13 +93,13 @@ export default function PersonalizedSpace() {
 
   const handleSetBudget = async () => {
     if (!budget || !user) return;
-    const token = localStorage.getItem('supabase_token') || '';
+    const token = localStorage.getItem('mithya_token') || '';
     const res = await setUrMoneyBudget(budget, monthStart, token);
     if (res.success) setIsBudgetSet(true);
   };
 
   const handleDeleteDeadline = async (id: string) => {
-    const token = localStorage.getItem('supabase_token') || '';
+    const token = localStorage.getItem('mithya_token') || '';
     await deletePrivateDeadline(id, token);
     setDeadlines(deadlines.filter(dl => dl.id !== id));
   };
@@ -126,7 +126,7 @@ export default function PersonalizedSpace() {
       file_size_bytes: fileSize
     };
 
-    const token = localStorage.getItem('supabase_token') || '';
+    const token = localStorage.getItem('mithya_token') || '';
     const res = await submitPrivateDeadline(payload, token);
 
     // This perfectly matches the HTTP 403 rule you requested
