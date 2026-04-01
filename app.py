@@ -215,20 +215,71 @@ def interact_post(post_id, action):
     try:
         if action not in ['like', 'dislike', 'report']:
             return jsonify({"success": False, "message": "Invalid action"}), 400
-            
+
+        # Get user identity — use IP as fallback for anonymous visitors
+        auth_header = request.headers.get('Authorization', '')
+        user_id = None
+        if auth_header.startswith('Bearer '):
+            try:
+                token = auth_header.replace('Bearer ', '')
+                payload = jwt.decode(token, SECRET_KEY, algorithms=["HS256"], options={"verify_aud": False})
+                user_id = payload.get('sub') or payload.get('user_id')
+            except Exception:
+                pass
+        if not user_id:
+            user_id = request.remote_addr  # Fallback: use IP address
+
         if action == 'report':
             result = voice_collection.update_one({"id": post_id}, {"$set": {"reported": True}})
+
         elif action == 'like':
-            result = voice_collection.update_one({"id": post_id}, {"$inc": {"likes": 1}})
+            post = voice_collection.find_one({"id": post_id})
+            if not post:
+                return jsonify({"success": False, "message": "Post not found"}), 404
+            liked_by = post.get('liked_by', [])
+            disliked_by = post.get('disliked_by', [])
+
+            if user_id in liked_by:
+                # Already liked — TOGGLE it off (unlike)
+                result = voice_collection.update_one(
+                    {"id": post_id},
+                    {"$pull": {"liked_by": user_id}, "$inc": {"likes": -1}}
+                )
+            else:
+                # New like — add user, also remove dislike if they had one
+                inc_val = {"likes": 1}
+                pull_val = {"liked_by": None}  # dummy
+                update = {"$addToSet": {"liked_by": user_id}, "$inc": {"likes": 1}}
+                if user_id in disliked_by:
+                    update["$pull"] = {"disliked_by": user_id}
+                    update["$inc"]["dislikes"] = -1
+                result = voice_collection.update_one({"id": post_id}, update)
+
         elif action == 'dislike':
-            result = voice_collection.update_one({"id": post_id}, {"$inc": {"dislikes": 1}})
-            
-        if result.modified_count == 0:
-            return jsonify({"success": False, "message": "Post not found"}), 404
-            
+            post = voice_collection.find_one({"id": post_id})
+            if not post:
+                return jsonify({"success": False, "message": "Post not found"}), 404
+            liked_by = post.get('liked_by', [])
+            disliked_by = post.get('disliked_by', [])
+
+            if user_id in disliked_by:
+                # Already disliked — TOGGLE off
+                result = voice_collection.update_one(
+                    {"id": post_id},
+                    {"$pull": {"disliked_by": user_id}, "$inc": {"dislikes": -1}}
+                )
+            else:
+                # New dislike
+                update = {"$addToSet": {"disliked_by": user_id}, "$inc": {"dislikes": 1}}
+                if user_id in liked_by:
+                    update["$pull"] = {"liked_by": user_id}
+                    update["$inc"]["likes"] = -1
+                result = voice_collection.update_one({"id": post_id}, update)
+
         return jsonify({"success": True})
     except Exception as e:
         return jsonify({"success": False, "message": str(e)})
+
 
 # ==========================================
 # 🧳 LOST & FOUND ENDPOINTS

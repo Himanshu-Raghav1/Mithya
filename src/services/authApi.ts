@@ -38,6 +38,13 @@ export async function verifyOtp(email: string, otp: string, anon_name?: string) 
       await supabase.auth.updateUser({
         data: { anon_name: anon_name }
       });
+      
+      // ✅ CRITICAL FIX: Re-fetch the session AFTER updateUser()
+      // The old token does not contain anon_name yet. We must get the fresh token.
+      const { data: refreshed } = await supabase.auth.refreshSession();
+      if (refreshed?.session) {
+        return { success: true, token: refreshed.session.access_token };
+      }
     }
 
     // Return the raw Supabase JWT which contains sub and user_metadata

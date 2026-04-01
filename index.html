@@ -2,11 +2,135 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+    <!-- =====================================================
+         🔍 CORE SEO: Title, Description, Keywords
+         ===================================================== -->
+    <title>Mithya — MIT-WPU Unofficial Student Hub | Sports, Notes, Events & Forum</title>
+    <meta name="description" content="Mithya is the unofficial student community platform for MIT-WPU Pune. Book sports slots, share anonymous posts, find lost items, access PYQs & notes, upcoming events, important contacts and more. Built by MIT-WPU students, for MIT-WPU students." />
+    <meta name="keywords" content="MIT-WPU, MIT World Peace University, MIT Pune unofficial, MITWPU unofficial website, MIT-WPU student hub, mit wpu sports booking, mit wpu pyqs, mit wpu notes, mit wpu lost and found, mit wpu forum, mit wpu events, mitwpu student platform, Mithya MIT" />
+    <meta name="author" content="MIT-WPU Students" />
+    <meta name="robots" content="index, follow" />
+    <link rel="canonical" href="https://mithya.social" />
+
+    <!-- =====================================================
+         📱 OPEN GRAPH — How it looks on WhatsApp, LinkedIn, Facebook
+         ===================================================== -->
+    <meta property="og:type" content="website" />
+    <meta property="og:url" content="https://mithya.social" />
+    <meta property="og:site_name" content="Mithya — MIT-WPU Unofficial Hub" />
+    <meta property="og:title" content="Mithya — MIT-WPU Unofficial Student Hub" />
+    <meta property="og:description" content="The unofficial community platform for MIT-WPU Pune. Sports slots, PYQs & Notes, anonymous forum, events, lost & found, and more — built by students, for students." />
+    <meta property="og:image" content="https://mithya.social/og-banner.png" />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:locale" content="en_IN" />
+
+    <!-- =====================================================
+         🐦 TWITTER / X CARDS — How it looks when shared on X
+         ===================================================== -->
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="Mithya — MIT-WPU Unofficial Student Hub" />
+    <meta name="twitter:description" content="Sports slots, PYQs, Events, anonymous forum, lost & found & more for MIT-WPU students." />
+    <meta name="twitter:image" content="https://mithya.social/og-banner.png" />
+
+    <!-- =====================================================
+         🤖 AEO: JSON-LD Structured Data for Google, Perplexity, ChatGPT Search
+         This tells AI search engines exactly WHAT this website is.
+         ===================================================== -->
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "WebApplication",
+      "name": "Mithya",
+      "url": "https://mithya.social",
+      "description": "Mithya is the unofficial student community platform for MIT World Peace University (MIT-WPU), Pune. It provides sports slot booking, an anonymous student forum (MITVoice), previous years' question papers and notes (PYQs), upcoming college events, lost and found listings, and important contact directory.",
+      "applicationCategory": "EducationApplication",
+      "operatingSystem": "Web",
+      "offers": {
+        "@type": "Offer",
+        "price": "0",
+        "priceCurrency": "INR"
+      },
+      "creator": {
+        "@type": "Organization",
+        "name": "MIT-WPU Student Community",
+        "url": "https://mithya.social"
+      },
+      "about": {
+        "@type": "EducationalOrganization",
+        "name": "MIT World Peace University",
+        "alternateName": ["MIT-WPU", "MITWPU", "MIT Pune"],
+        "url": "https://mitwpu.edu.in",
+        "address": {
+          "@type": "PostalAddress",
+          "addressLocality": "Pune",
+          "addressRegion": "Maharashtra",
+          "addressCountry": "IN"
+        }
+      },
+      "featureList": [
+        "Live sports slot booking",
+        "Anonymous student forum (MITVoice)",
+        "PYQs and study notes sharing",
+        "Upcoming events and concerts",
+        "Lost and found notice board",
+        "Important contacts directory",
+        "Private student space (deadlines and budget tracker)"
+      ]
+    }
+    </script>
+
+    <!-- =====================================================
+         🏫 AEO: FAQ Schema — This makes Google show rich FAQs directly in search
+         ===================================================== -->
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "FAQPage",
+      "mainEntity": [
+        {
+          "@type": "Question",
+          "name": "What is Mithya?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "Mithya is an unofficial student community platform built for MIT World Peace University (MIT-WPU), Pune students. It offers sports slot booking, an anonymous forum, PYQs and notes, events listing, lost and found, and important contacts."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "Is Mithya the unofficial MIT-WPU website?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "Yes. Mithya (mithya.social) is an unofficial, student-built platform for MIT-WPU (MIT World Peace University) Pune. It is not affiliated with the official MIT-WPU administration."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "How do I book sports slots at MIT-WPU?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "On Mithya, go to the Live Sports tab to see real-time available sports slots at MIT-WPU including chess, badminton, table tennis, and more."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "Where can I find MIT-WPU PYQs and notes?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "Mithya has a dedicated PYQs and Notes section where MIT-WPU students can upload and download previous years' question papers and study notes, filterable by program, semester, and subject."
+          }
+        }
+      ]
+    }
+    </script>
+
+    <!-- Favicon & Touch Icon -->
     <link rel="icon" type="image/png" href="/logo.png" />
     <link rel="apple-touch-icon" href="/logo.png" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <meta name="description" content="Mithya - The unofficial community hub for MIT students. Sports slots, anonymous forum, events, and more." />
-    <title>Mithya — MIT's Unofficial Hub</title>
+
+    <!-- Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
