@@ -106,10 +106,13 @@ export async function addComment(postId: string, text: string, token: string): P
   }
 }
 
-export async function interactWithPost(postId: string, action: 'like' | 'dislike' | 'report'): Promise<ApiResponse<void>> {
+export async function interactWithPost(postId: string, action: 'like' | 'dislike' | 'report', token?: string): Promise<ApiResponse<void>> {
   try {
+    const headers: Record<string, string> = {};
+    if (token) headers['Authorization'] = `Bearer ${token}`;
     const res = await fetch(`${API_BASE_URL}/api/voice/posts/${postId}/${action}`, {
-      method: 'PUT'
+      method: 'PUT',
+      headers
     });
     return await res.json() as ApiResponse<void>;
   } catch {

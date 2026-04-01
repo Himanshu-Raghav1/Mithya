@@ -111,23 +111,25 @@ export default function MITVoice() {
   };
 
   const handleLike = async (id: string, currentlyLiked: boolean) => {
+    if (!user || !token) { setShowAuth(true); return; }
     // Optimistic UI update
     setPosts(posts.map(p => {
       if (p.id !== id) return p;
       if (currentlyLiked) return { ...p, likes: p.likes - 1, likedByMe: false };
       return { ...p, likes: p.likes + 1, likedByMe: true, dislikes: p.dislikedByMe ? p.dislikes - 1 : p.dislikes, dislikedByMe: false };
     }));
-    await interactWithPost(id, 'like');
+    await interactWithPost(id, 'like', token);
   };
 
   const handleDislike = async (id: string, currentlyDisliked: boolean) => {
+    if (!user || !token) { setShowAuth(true); return; }
     // Optimistic UI update
     setPosts(posts.map(p => {
       if (p.id !== id) return p;
       if (currentlyDisliked) return { ...p, dislikes: p.dislikes - 1, dislikedByMe: false };
       return { ...p, dislikes: p.dislikes + 1, dislikedByMe: true, likes: p.likedByMe ? p.likes - 1 : p.likes, likedByMe: false };
     }));
-    await interactWithPost(id, 'dislike');
+    await interactWithPost(id, 'dislike', token);
   };
 
   const handleReport = async (id: string) => {
