@@ -26,7 +26,14 @@ function decodeJwt(token: string): AuthUser | null {
     const payload = JSON.parse(atob(token.split('.')[1]));
     // Check expiry
     if (payload.exp * 1000 < Date.now()) return null;
-    return { user_id: payload.user_id, email: payload.email, anon_name: payload.anon_name };
+    
+    // Support natively decoded Supabase JWTs:
+    // User ID is in 'sub', anon_name is inside 'user_metadata'
+    return { 
+      user_id: payload.sub || payload.user_id, 
+      email: payload.email, 
+      anon_name: payload.user_metadata?.anon_name || payload.anon_name || "MithyaUser"
+    };
   } catch {
     return null;
   }

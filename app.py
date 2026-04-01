@@ -53,8 +53,16 @@ def require_auth(f):
         if not token:
             return jsonify({"success": False, "message": "Login required to do this 🔒"}), 401
         try:
-            payload = jwt.decode(token, SECRET_KEY, algorithms=["HS256"])
-            request.auth_user = payload  # {user_id, email, anon_name}
+            # We ignore audience check since Supabase puts 'authenticated' in aud, 
+            # and verify the token signature using the Supabase JWT SECRET_KEY.
+            payload = jwt.decode(token, SECRET_KEY, algorithms=["HS256"], options={"verify_aud": False})
+            
+            # Map Supabase structure back to our app's internal AuthUser format
+            user_id = payload.get('sub') or payload.get('user_id')
+            user_meta = payload.get('user_metadata', {})
+            anon_name = user_meta.get('anon_name') or payload.get('anon_name') or "MithyaUser"
+            
+            request.auth_user = {"user_id": user_id, "email": payload.get('email'), "anon_name": anon_name}
         except jwt.ExpiredSignatureError:
             return jsonify({"success": False, "message": "Session expired, please log in again"}), 401
         except jwt.InvalidTokenError:
