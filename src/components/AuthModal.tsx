@@ -52,8 +52,9 @@ export default function AuthModal({ onClose, reason }: AuthModalProps) {
       const res = await sendOtp(finalEmail);
       if (!res.success) return setError(res.message);
       setStage(res.is_new ? 'otp-new' : 'otp-returning');
-    } catch { 
-      setError('Network error (Backend is sleeping or not configured). Please check your Render/Vercel URLs and try again.'); 
+    } catch (err: any) { 
+      console.error(err);
+      setError(err?.message || 'Network error connecting to Supabase. Check your browser connection.'); 
     }
     finally { setIsLoading(false); }
   };
@@ -65,10 +66,13 @@ export default function AuthModal({ onClose, reason }: AuthModalProps) {
     setIsLoading(true);
     try {
       const res = await verifyOtp(email, otp, stage === 'otp-new' ? anonName : undefined);
-      if (!res.success) return setError(res.message);
+      if (!res.success || !res.token) return setError(res.message || 'Login failed, please try again.');
       login(res.token);
       onClose();
-    } catch { setError('Network error. Please try again.'); }
+    } catch (err: any) { 
+      console.error(err);
+      setError(err?.message || 'Network error. Please try again.'); 
+    }
     finally { setIsLoading(false); }
   };
 
