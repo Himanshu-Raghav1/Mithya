@@ -78,187 +78,357 @@ export default function AuthModal({ onClose, reason }: AuthModalProps) {
 
   return (
     <AnimatePresence>
+      {/* Full-screen overlay — always perfectly centered */}
       <motion.div
-        className="fixed inset-0 z-50 flex items-center justify-center p-4"
+        key="auth-overlay"
+        className="fixed inset-0 z-50"
+        style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '16px' }}
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         exit={{ opacity: 0 }}
+        transition={{ duration: 0.2 }}
       >
-        {/* Backdrop */}
+        {/* Animated blurred backdrop */}
         <motion.div
-          className="absolute inset-0 bg-black/60 backdrop-blur-sm"
+          className="absolute inset-0"
+          initial={{ backdropFilter: 'blur(0px)', backgroundColor: 'rgba(0,0,0,0)' }}
+          animate={{ backdropFilter: 'blur(8px)', backgroundColor: 'rgba(0,0,0,0.65)' }}
+          exit={{ backdropFilter: 'blur(0px)', backgroundColor: 'rgba(0,0,0,0)' }}
+          transition={{ duration: 0.3 }}
           onClick={onClose}
         />
 
-        {/* Card */}
+        {/* Modal Card */}
         <motion.div
-          className="relative glass-card w-full max-w-sm p-6 z-10"
-          initial={{ scale: 0.9, y: 30, opacity: 0 }}
+          key="auth-card"
+          className="relative w-full z-10 overflow-hidden"
+          style={{
+            maxWidth: '400px',
+            borderRadius: '24px',
+            background: 'linear-gradient(145deg, rgba(10,14,50,0.98) 0%, rgba(5,8,30,0.98) 100%)',
+            border: '1px solid rgba(255,255,255,0.12)',
+            boxShadow: '0 25px 80px rgba(0,0,0,0.6), 0 0 0 1px rgba(255,215,64,0.08), inset 0 1px 0 rgba(255,255,255,0.08)',
+          }}
+          initial={{ scale: 0.85, y: 40, opacity: 0 }}
           animate={{ scale: 1, y: 0, opacity: 1 }}
-          transition={{ type: 'spring', stiffness: 300, damping: 25 }}
-          style={{ background: 'rgba(10,14,40,0.95)', border: '1.5px solid rgba(255,255,255,0.15)' }}
+          exit={{ scale: 0.9, y: 20, opacity: 0 }}
+          transition={{ type: 'spring', stiffness: 350, damping: 28, mass: 0.8 }}
         >
-          {/* Close */}
-          <button onClick={onClose} className="absolute top-4 right-4 text-white/40 hover:text-white">
-            <X className="w-5 h-5" />
-          </button>
+          {/* Decorative glow ring at top */}
+          <div style={{
+            position: 'absolute', top: '-60px', left: '50%', transform: 'translateX(-50%)',
+            width: '200px', height: '120px',
+            background: 'radial-gradient(ellipse, rgba(255,215,64,0.15) 0%, transparent 70%)',
+            pointerEvents: 'none'
+          }} />
 
-          {/* Logo row */}
-          <div className="flex items-center gap-2 mb-1">
-            <img src="/logo.png" alt="Mithya" className="w-8 h-8 rounded-full" onError={e => e.currentTarget.style.display='none'} />
-            <span className="text-white font-black tracking-widest text-sm">MITHYA</span>
-          </div>
+          {/* Animated top accent line */}
+          <motion.div
+            style={{ height: '3px', background: 'linear-gradient(90deg, transparent, #FFD740, #00A8E8, transparent)' }}
+            initial={{ scaleX: 0 }}
+            animate={{ scaleX: 1 }}
+            transition={{ delay: 0.2, duration: 0.5 }}
+          />
 
-          {/* ── Stage: Email ──────────────────────────────── */}
-          {stage === 'email' && (
-            <div className="space-y-4 mt-4">
-              <div>
-                <h2 className="text-xl font-black text-white">Sign in to Mithya 👋</h2>
-                <p className="text-white/40 text-xs mt-1 italic">Sorry yaar, spammers se bachne ke liye karna padega 🙏</p>
-                {reason && (
-                  <p className="text-white/50 text-xs mt-1">Auth required <span className="text-yellow-400">{reason}</span></p>
-                )}
+          <div className="p-7">
+            {/* Close button */}
+            <motion.button
+              onClick={onClose}
+              className="absolute top-5 right-5 text-white/30 hover:text-white/80 transition-colors"
+              whileHover={{ scale: 1.2, rotate: 90 }}
+              whileTap={{ scale: 0.9 }}
+              transition={{ duration: 0.2 }}
+            >
+              <X className="w-5 h-5" />
+            </motion.button>
+
+            {/* Logo row */}
+            <motion.div
+              className="flex items-center gap-3 mb-6"
+              initial={{ opacity: 0, x: -20 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ delay: 0.15, duration: 0.4 }}
+            >
+              <div style={{
+                width: '40px', height: '40px', borderRadius: '12px', overflow: 'hidden',
+                border: '1.5px solid rgba(255,215,64,0.3)',
+                boxShadow: '0 0 12px rgba(255,215,64,0.2)'
+              }}>
+                <img src="/logo.png" alt="Mithya" style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                  onError={e => (e.currentTarget.style.display = 'none')} />
               </div>
-
               <div>
-                <label className="text-xs font-bold text-white/50 mb-1 flex items-center gap-1">
-                  <Mail className="w-3 h-3" /> MIT-WPU Email
-                </label>
-                <input
-                  type="email"
-                  value={email}
-                  onChange={e => setEmail(e.target.value)}
-                  onKeyDown={e => e.key === 'Enter' && handleSendOtp()}
-                  placeholder="yourname@mitwpu.edu.in"
-                  className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white placeholder-white/25 outline-none focus:border-blue-400 transition-colors text-sm"
-                />
+                <div style={{
+                  fontWeight: 900, letterSpacing: '0.15em', fontSize: '15px',
+                  background: 'linear-gradient(135deg, #FFD740, #ffffff)',
+                  WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent'
+                }}>MITHYA</div>
+                <div style={{ fontSize: '10px', color: 'rgba(255,255,255,0.35)', fontWeight: 600 }}>MIT-WPU Community</div>
               </div>
+            </motion.div>
 
-              {error && <p className="text-red-400 text-xs font-bold">{error}</p>}
+            {/* ── Stage: Email ── */}
+            <AnimatePresence mode="wait">
+              {stage === 'email' && (
+                <motion.div
+                  key="email-stage"
+                  initial={{ opacity: 0, x: 30 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  exit={{ opacity: 0, x: -30 }}
+                  transition={{ duration: 0.25 }}
+                  className="space-y-5"
+                >
+                  <div>
+                    <h2 style={{ fontSize: '22px', fontWeight: 900, color: 'white', lineHeight: 1.2 }}>
+                      Sign in to Mithya 👋
+                    </h2>
+                    <p style={{ color: 'rgba(255,255,255,0.38)', fontSize: '12px', marginTop: '6px', fontStyle: 'italic' }}>
+                      Sorry yaar, spammers se bachne ke liye karna padega 🙏
+                    </p>
+                    {reason && (
+                      <p style={{ color: 'rgba(255,255,255,0.45)', fontSize: '11px', marginTop: '6px' }}>
+                        Required <span style={{ color: '#FFD740' }}>{reason}</span>
+                      </p>
+                    )}
+                  </div>
 
-              <button
-                onClick={handleSendOtp}
-                disabled={isLoading}
-                className="w-full py-3 rounded-xl font-black text-sm text-black bg-yellow-400 hover:bg-yellow-300 disabled:opacity-50 transition-all flex items-center justify-center gap-2"
-              >
-                {isLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Send OTP →'}
-              </button>
+                  <div>
+                    <label style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '11px', fontWeight: 700, color: 'rgba(255,255,255,0.45)', marginBottom: '8px' }}>
+                      <Mail className="w-3 h-3" /> MIT-WPU Email
+                    </label>
+                    <input
+                      type="email"
+                      value={email}
+                      onChange={e => setEmail(e.target.value)}
+                      onKeyDown={e => e.key === 'Enter' && handleSendOtp()}
+                      placeholder="1234567890@mitwpu.edu.in"
+                      autoFocus
+                      style={{
+                        width: '100%', padding: '13px 16px', borderRadius: '14px',
+                        background: 'rgba(255,255,255,0.05)', color: 'white', fontSize: '14px',
+                        border: '1.5px solid rgba(255,255,255,0.1)', outline: 'none',
+                        transition: 'border-color 0.2s',
+                      }}
+                      onFocus={e => e.target.style.borderColor = 'rgba(0,168,232,0.6)'}
+                      onBlur={e => e.target.style.borderColor = 'rgba(255,255,255,0.1)'}
+                    />
+                  </div>
 
-              <p className="text-center text-[10px] text-white/30">
-                Only MIT-WPU students can join. No password needed.
-              </p>
-            </div>
-          )}
+                  {error && (
+                    <motion.p
+                      key={error}
+                      initial={{ opacity: 0, y: -6 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      style={{ color: '#f87171', fontSize: '12px', fontWeight: 700 }}
+                    >{error}</motion.p>
+                  )}
 
-          {/* ── Stage: OTP (New user) ─────────────────────── */}
-          {stage === 'otp-new' && (
-            <div className="space-y-4 mt-4">
-              <div>
-                <h2 className="text-xl font-black text-white">Create your identity ✨</h2>
-                <p className="text-white/50 text-xs mt-1">OTP sent to <span className="text-blue-300">{email}</span></p>
-              </div>
-
-              {/* Anonymous name */}
-              <div>
-                <label className="text-xs font-bold text-yellow-300 mb-1 flex items-center gap-1">
-                  <User className="w-3 h-3" /> Choose Anonymous Username
-                </label>
-                <div className="flex gap-2">
-                  <input
-                    type="text"
-                    value={anonName}
-                    onChange={e => setAnonName(e.target.value)}
-                    placeholder="e.g. StormWatcher42"
-                    maxLength={20}
-                    className="flex-1 bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white placeholder-white/25 outline-none focus:border-yellow-400 transition-colors text-sm"
-                  />
-                  <button
-                    onClick={randomName}
-                    className="p-3 rounded-xl bg-white/10 hover:bg-yellow-400/20 text-white/60 hover:text-yellow-300 transition-colors"
-                    title="Random suggestion"
+                  <motion.button
+                    onClick={handleSendOtp}
+                    disabled={isLoading}
+                    whileHover={{ scale: 1.02 }}
+                    whileTap={{ scale: 0.97 }}
+                    style={{
+                      width: '100%', padding: '14px', borderRadius: '14px',
+                      fontWeight: 900, fontSize: '14px', color: '#000',
+                      background: 'linear-gradient(135deg, #FFD740, #FFA000)',
+                      border: 'none', cursor: 'pointer', opacity: isLoading ? 0.6 : 1,
+                      display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px',
+                      boxShadow: '0 4px 20px rgba(255,215,64,0.3)',
+                    }}
                   >
-                    <Shuffle className="w-4 h-4" />
+                    {isLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Send OTP →'}
+                  </motion.button>
+
+                  <p style={{ textAlign: 'center', fontSize: '10px', color: 'rgba(255,255,255,0.25)' }}>
+                    Only MIT-WPU students can join. No password needed.
+                  </p>
+                </motion.div>
+              )}
+
+              {/* ── Stage: OTP New User ── */}
+              {stage === 'otp-new' && (
+                <motion.div
+                  key="otp-new-stage"
+                  initial={{ opacity: 0, x: 30 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  exit={{ opacity: 0, x: -30 }}
+                  transition={{ duration: 0.25 }}
+                  className="space-y-5"
+                >
+                  <div>
+                    <h2 style={{ fontSize: '22px', fontWeight: 900, color: 'white', lineHeight: 1.2 }}>
+                      Create your identity ✨
+                    </h2>
+                    <p style={{ color: 'rgba(255,255,255,0.45)', fontSize: '12px', marginTop: '6px' }}>
+                      OTP sent to <span style={{ color: '#93c5fd' }}>{email}</span>
+                    </p>
+                  </div>
+
+                  <div>
+                    <label style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '11px', fontWeight: 700, color: '#FFD740', marginBottom: '8px' }}>
+                      <User className="w-3 h-3" /> Choose Anonymous Username
+                    </label>
+                    <div style={{ display: 'flex', gap: '8px' }}>
+                      <input
+                        type="text"
+                        value={anonName}
+                        onChange={e => setAnonName(e.target.value)}
+                        placeholder="e.g. StormWatcher42"
+                        maxLength={20}
+                        autoFocus
+                        style={{
+                          flex: 1, padding: '13px 16px', borderRadius: '14px',
+                          background: 'rgba(255,255,255,0.05)', color: 'white', fontSize: '14px',
+                          border: '1.5px solid rgba(255,215,64,0.25)', outline: 'none',
+                        }}
+                        onFocus={e => e.target.style.borderColor = 'rgba(255,215,64,0.6)'}
+                        onBlur={e => e.target.style.borderColor = 'rgba(255,215,64,0.25)'}
+                      />
+                      <motion.button
+                        onClick={randomName}
+                        whileHover={{ scale: 1.1, rotate: 180 }}
+                        whileTap={{ scale: 0.9 }}
+                        transition={{ duration: 0.3 }}
+                        style={{
+                          padding: '13px', borderRadius: '14px',
+                          background: 'rgba(255,215,64,0.1)', color: 'rgba(255,215,64,0.7)',
+                          border: '1px solid rgba(255,215,64,0.2)', cursor: 'pointer'
+                        }}
+                        title="Random name"
+                      >
+                        <Shuffle className="w-4 h-4" />
+                      </motion.button>
+                    </div>
+                    <p style={{ color: 'rgba(255,255,255,0.25)', fontSize: '10px', marginTop: '6px' }}>
+                      Your anonymous identity on MITVoice. 3–20 chars.
+                    </p>
+                  </div>
+
+                  <div>
+                    <label style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '11px', fontWeight: 700, color: 'rgba(255,255,255,0.45)', marginBottom: '8px' }}>
+                      <KeyRound className="w-3 h-3" /> OTP (check your MIT email)
+                    </label>
+                    <input
+                      type="text"
+                      value={otp}
+                      onChange={e => setOtp(e.target.value.replace(/\D/g, '').slice(0, 6))}
+                      onKeyDown={e => e.key === 'Enter' && handleVerify()}
+                      placeholder="• • • • • •"
+                      inputMode="numeric"
+                      maxLength={6}
+                      style={{
+                        width: '100%', padding: '13px 16px', borderRadius: '14px',
+                        background: 'rgba(255,255,255,0.05)', color: 'white', fontSize: '22px',
+                        border: '1.5px solid rgba(255,255,255,0.1)', outline: 'none',
+                        textAlign: 'center', fontWeight: 900, letterSpacing: '0.4em',
+                      }}
+                      onFocus={e => e.target.style.borderColor = 'rgba(74,222,128,0.6)'}
+                      onBlur={e => e.target.style.borderColor = 'rgba(255,255,255,0.1)'}
+                    />
+                  </div>
+
+                  {error && (
+                    <motion.p key={error} initial={{ opacity: 0, y: -6 }} animate={{ opacity: 1, y: 0 }}
+                      style={{ color: '#f87171', fontSize: '12px', fontWeight: 700 }}>{error}</motion.p>
+                  )}
+
+                  <motion.button
+                    onClick={handleVerify} disabled={isLoading}
+                    whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.97 }}
+                    style={{
+                      width: '100%', padding: '14px', borderRadius: '14px',
+                      fontWeight: 900, fontSize: '14px', color: '#000',
+                      background: 'linear-gradient(135deg, #FFD740, #FFA000)',
+                      border: 'none', cursor: 'pointer', opacity: isLoading ? 0.6 : 1,
+                      display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px',
+                      boxShadow: '0 4px 20px rgba(255,215,64,0.3)',
+                    }}
+                  >
+                    {isLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Join Mithya 🚀'}
+                  </motion.button>
+
+                  <button onClick={() => setStage('email')}
+                    style={{ width: '100%', color: 'rgba(255,255,255,0.3)', fontSize: '12px', background: 'none', border: 'none', cursor: 'pointer' }}>
+                    ← Back to email
                   </button>
-                </div>
-                <p className="text-white/30 text-[10px] mt-1">
-                  This is your Mithya identity — visible on MITVoice. 3–20 chars, no spaces.
-                </p>
-              </div>
+                </motion.div>
+              )}
 
-              {/* OTP */}
-              <div>
-                <label className="text-xs font-bold text-white/50 mb-1 flex items-center gap-1">
-                  <KeyRound className="w-3 h-3" /> OTP (check your MIT email)
-                </label>
-                <input
-                  type="text"
-                  value={otp}
-                  onChange={e => setOtp(e.target.value.replace(/\D/g, '').slice(0, 6))}
-                  onKeyDown={e => e.key === 'Enter' && handleVerify()}
-                  placeholder="6-digit code"
-                  inputMode="numeric"
-                  maxLength={6}
-                  className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white placeholder-white/25 outline-none focus:border-green-400 tracking-widest text-center text-xl font-black"
-                />
-              </div>
+              {/* ── Stage: OTP Returning User ── */}
+              {stage === 'otp-returning' && (
+                <motion.div
+                  key="otp-returning-stage"
+                  initial={{ opacity: 0, x: 30 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  exit={{ opacity: 0, x: -30 }}
+                  transition={{ duration: 0.25 }}
+                  className="space-y-5"
+                >
+                  <div>
+                    <h2 style={{ fontSize: '22px', fontWeight: 900, color: 'white', lineHeight: 1.2 }}>
+                      Welcome back! 👾
+                    </h2>
+                    <p style={{ color: 'rgba(255,255,255,0.45)', fontSize: '12px', marginTop: '6px' }}>
+                      OTP sent to <span style={{ color: '#93c5fd' }}>{email}</span>
+                    </p>
+                  </div>
 
-              {error && <p className="text-red-400 text-xs font-bold">{error}</p>}
+                  <div>
+                    <label style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '11px', fontWeight: 700, color: 'rgba(255,255,255,0.45)', marginBottom: '8px' }}>
+                      <KeyRound className="w-3 h-3" /> Enter OTP
+                    </label>
+                    <input
+                      type="text"
+                      value={otp}
+                      onChange={e => setOtp(e.target.value.replace(/\D/g, '').slice(0, 6))}
+                      onKeyDown={e => e.key === 'Enter' && handleVerify()}
+                      placeholder="• • • • • •"
+                      inputMode="numeric"
+                      maxLength={6}
+                      autoFocus
+                      style={{
+                        width: '100%', padding: '13px 16px', borderRadius: '14px',
+                        background: 'rgba(255,255,255,0.05)', color: 'white', fontSize: '22px',
+                        border: '1.5px solid rgba(255,255,255,0.1)', outline: 'none',
+                        textAlign: 'center', fontWeight: 900, letterSpacing: '0.4em',
+                      }}
+                      onFocus={e => e.target.style.borderColor = 'rgba(74,222,128,0.6)'}
+                      onBlur={e => e.target.style.borderColor = 'rgba(255,255,255,0.1)'}
+                    />
+                  </div>
 
-              <button
-                onClick={handleVerify}
-                disabled={isLoading}
-                className="w-full py-3 rounded-xl font-black text-sm text-black bg-yellow-400 hover:bg-yellow-300 disabled:opacity-50 transition-all flex items-center justify-center gap-2"
-              >
-                {isLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Join Mithya 🚀'}
-              </button>
+                  {error && (
+                    <motion.p key={error} initial={{ opacity: 0, y: -6 }} animate={{ opacity: 1, y: 0 }}
+                      style={{ color: '#f87171', fontSize: '12px', fontWeight: 700 }}>{error}</motion.p>
+                  )}
 
-              <button onClick={() => setStage('email')} className="w-full text-white/30 text-xs hover:text-white/60">
-                ← Back
-              </button>
-            </div>
-          )}
+                  <motion.button
+                    onClick={handleVerify} disabled={isLoading}
+                    whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.97 }}
+                    style={{
+                      width: '100%', padding: '14px', borderRadius: '14px',
+                      fontWeight: 900, fontSize: '14px', color: '#000',
+                      background: 'linear-gradient(135deg, #FFD740, #FFA000)',
+                      border: 'none', cursor: 'pointer', opacity: isLoading ? 0.6 : 1,
+                      display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px',
+                      boxShadow: '0 4px 20px rgba(255,215,64,0.3)',
+                    }}
+                  >
+                    {isLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Enter Mithya →'}
+                  </motion.button>
 
-          {/* ── Stage: OTP (Returning user) ───────────────── */}
-          {stage === 'otp-returning' && (
-            <div className="space-y-4 mt-4">
-              <div>
-                <h2 className="text-xl font-black text-white">Welcome back! 👾</h2>
-                <p className="text-white/50 text-xs mt-1">OTP sent to <span className="text-blue-300">{email}</span></p>
-              </div>
-
-              <div>
-                <label className="text-xs font-bold text-white/50 mb-1 flex items-center gap-1">
-                  <KeyRound className="w-3 h-3" /> Enter OTP
-                </label>
-                <input
-                  type="text"
-                  value={otp}
-                  onChange={e => setOtp(e.target.value.replace(/\D/g, '').slice(0, 6))}
-                  onKeyDown={e => e.key === 'Enter' && handleVerify()}
-                  placeholder="6-digit code"
-                  inputMode="numeric"
-                  maxLength={6}
-                  className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white placeholder-white/25 outline-none focus:border-green-400 tracking-widest text-center text-xl font-black"
-                />
-              </div>
-
-              {error && <p className="text-red-400 text-xs font-bold">{error}</p>}
-
-              <button
-                onClick={handleVerify}
-                disabled={isLoading}
-                className="w-full py-3 rounded-xl font-black text-sm text-black bg-yellow-400 hover:bg-yellow-300 disabled:opacity-50 transition-all flex items-center justify-center gap-2"
-              >
-                {isLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Enter Mithya →'}
-              </button>
-
-              <button onClick={() => setStage('email')} className="w-full text-white/30 text-xs hover:text-white/60">
-                ← Back
-              </button>
-            </div>
-          )}
+                  <button onClick={() => setStage('email')}
+                    style={{ width: '100%', color: 'rgba(255,255,255,0.3)', fontSize: '12px', background: 'none', border: 'none', cursor: 'pointer' }}>
+                    ← Back to email
+                  </button>
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </div>
         </motion.div>
       </motion.div>
     </AnimatePresence>
   );
 }
+
