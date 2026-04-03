@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { createPortal } from 'react-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, Mail, KeyRound, User, Loader2, Shuffle } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
@@ -76,13 +77,17 @@ export default function AuthModal({ onClose, reason }: AuthModalProps) {
     finally { setIsLoading(false); }
   };
 
-  return (
+  const modalContent = (
     <AnimatePresence>
-      {/* Full-screen overlay — always perfectly centered */}
+      {/* Portal renders this DIRECTLY on document.body — bypasses ALL parent transforms */}
       <motion.div
         key="auth-overlay"
-        className="fixed inset-0 z-50"
-        style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '16px' }}
+        style={{
+          position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
+          zIndex: 99999,
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          padding: '16px'
+        }}
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         exit={{ opacity: 0 }}
@@ -430,5 +435,8 @@ export default function AuthModal({ onClose, reason }: AuthModalProps) {
       </motion.div>
     </AnimatePresence>
   );
+
+  return createPortal(modalContent, document.body);
 }
+
 

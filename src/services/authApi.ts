@@ -14,9 +14,21 @@ export async function sendOtp(email: string) {
     
     if (error) return { success: false, message: error.message };
     
-    // Check localStorage flag: after first registration we mark 'mithya_registered'
-    // Returning users skip the anon_name screen entirely
-    const isReturning = localStorage.getItem('mithya_registered') === 'true';
+    // Check 1: localStorage flag set after first successful login on this device
+    const localFlag = localStorage.getItem('mithya_registered') === 'true';
+    
+    // Check 2: If user already has an active Supabase session with anon_name → they're returning
+    // This works even if localStorage was cleared (new device, private browsing etc.)
+    let sessionFlag = false;
+    try {
+      const { data: session } = await supabase.auth.getSession();
+      if (session?.session?.user?.user_metadata?.anon_name) {
+        sessionFlag = true;
+        localStorage.setItem('mithya_registered', 'true'); // Restore the flag
+      }
+    } catch { /* ignore */ }
+
+    const isReturning = localFlag || sessionFlag;
     return { success: true, is_new: !isReturning };
   } catch (err: any) {
     return { success: false, message: err.message };
