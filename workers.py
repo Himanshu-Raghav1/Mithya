@@ -18,6 +18,7 @@ IST = timezone(timedelta(hours=5, minutes=30))
 # ==========================================
 # ⚙️ CONFIGURATION 
 # ==========================================
+# Note: In the future, you should move these to Render Environment Variables for security!
 SUPABASE_URL = "https://kmqhrlinvxqnipvvlvwv.supabase.co"
 API_KEY = "sb_publishable_kitYyNDBQZI32jyejgStcQ_fuVgY12m" 
 
@@ -59,6 +60,13 @@ def get_fresh_token():
         )
         context = browser.new_context()
         page = context.new_page()
+        
+        # 🛡️ RENDER FIX 1: THE MEMORY SAVER
+        # This aborts loading any images, CSS, or fonts, saving massive amounts of RAM
+        page.route("**/*", lambda route: route.abort() 
+            if route.request.resource_type in ["image", "stylesheet", "font", "media"] 
+            else route.continue_()
+        )
         
         auth_token = None
         try:
@@ -160,8 +168,6 @@ def scrape_and_update_db(token):
                 end_time_str = slot.get('end_time', '')
                 
                 # 🛑 FIX 3: THE DATE CHECK
-                # If the slot is a full datetime string, ensure it is actually for TODAY!
-                # If it's for tomorrow (e.g., a weekend slot), we must skip it.
                 if 'T' in start_time_str:
                     slot_date = start_time_str.split('T')[0]
                     if slot_date != today_date:
@@ -230,22 +236,34 @@ def scrape_and_update_db(token):
         print(f"❌ An error occurred during the scan: {e}")
 
 # ==========================================
-# 🚀 SINGLE-RUN ENTRY POINT 
+# 🚀 INFINITE LOOP ENTRY POINT (Render Fix)
 # ==========================================
 if __name__ == "__main__":
     print("==========================================")
     print("   🏅 MITHYA SPORTS WORKER STARTING       ")
     print("==========================================")
 
-    now = datetime.now(IST)
-    if 0 <= now.hour < 4:
-        print(f"🌙 Night Mode ({now.strftime('%I:%M %p')} IST) — skipping scrape. Service resumes at 4:00 AM IST.")
-        sys.exit(0)
-
-    token = get_fresh_token()
-    if token:
-        scrape_and_update_db(token)
-        print("✅ Worker completed successfully. Exiting.")
-    else:
-        print("❌ Failed to get auth token. Exiting.")
-        sys.exit(1)
+    # 🛡️ RENDER FIX 2: THE INFINITE LOOP
+    # This prevents the script from ever stopping, which stops Render from constantly restarting it
+    while True:
+        now = datetime.now(IST)
+        
+        if 0 <= now.hour < 4:
+            print(f"\n[{now.strftime('%I:%M %p')} IST] 🌙 Night Mode — sleeping for 1 hour. Service resumes at 4:00 AM IST.")
+            time.sleep(3600)  # Sleep for exactly 1 hour
+            continue # Start the loop over without scraping
+            
+        print(f"\n--- Starting Scraping Cycle at {now.strftime('%I:%M %p')} IST ---")
+        
+        try:
+            token = get_fresh_token()
+            if token:
+                scrape_and_update_db(token)
+            else:
+                print("❌ Failed to get auth token this round.")
+        except Exception as e:
+            print(f"❌ Worker encountered an error: {e}")
+            
+        # 💤 The crucial step: Sleep for 15 minutes before running again!
+        print("💤 Job done. Worker sleeping for 15 minutes to save RAM...")
+        time.sleep(900)
