@@ -40,7 +40,7 @@ function ShinchanMini() {
 const TAG_COLORS: Record<EventTag, { bg: string; text: string; border: string }> = {
   Hackathon: { bg: 'rgba(0,168,232,0.2)', text: '#4FC3F7', border: 'rgba(0,168,232,0.4)' },
   Ideathon: { bg: 'rgba(156,39,176,0.2)', text: '#CE93D8', border: 'rgba(156,39,176,0.4)' },
-  Club Drive: { bg: 'rgba(255,152,0,0.2)', text: '#FFCC02', border: 'rgba(255,152,0,0.4)' },
+  Club_Drive: { bg: 'rgba(255,152,0,0.2)', text: '#FFCC02', border: 'rgba(255,152,0,0.4)' },
   Volunteering: { bg: 'rgba(76,175,80,0.2)', text: '#81C784', border: 'rgba(76,175,80,0.4)' },
   Workshop: { bg: 'rgba(233,30,99,0.2)', text: '#F48FB1', border: 'rgba(233,30,99,0.4)' },
   Competition: { bg: 'rgba(229,57,53,0.2)', text: '#EF9A9A', border: 'rgba(229,57,53,0.4)' },

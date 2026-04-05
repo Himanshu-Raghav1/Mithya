@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Loader2, Pin, X } from 'lucide-react';
+
 import { getPinboard } from '../services/api';
 import type { PinItem } from '../types';
 
@@ -72,9 +72,9 @@ export default function PinBoard() {
               onClick={() => setExpandedImage(pin.image_url)}
               whileHover={{ y: -4 }}
             >
-              <img 
-                src={pin.image_url} 
-                alt="Pin" 
+              <img
+                src={pin.image_url}
+                alt="Pin"
                 className="w-full h-auto object-cover border-b border-white/10"
                 loading="lazy"
               />
@@ -97,10 +97,10 @@ export default function PinBoard() {
       <AnimatePresence>
         {expandedImage && (
           <div className="fixed inset-0 z-[70] bg-black/95 flex items-center justify-center p-4 backdrop-blur-sm"
-               onClick={() => setExpandedImage(null)}>
+            onClick={() => setExpandedImage(null)}>
             <motion.button
-              initial={{ opacity: 0 }} 
-              animate={{ opacity: 1 }} 
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
               whileHover={{ scale: 1.1 }}
               whileTap={{ scale: 0.9 }}
@@ -108,13 +108,13 @@ export default function PinBoard() {
             >
               <X className="w-6 h-6 text-white" />
             </motion.button>
-            <motion.img 
-              initial={{ scale: 0.9, opacity: 0 }} 
-              animate={{ scale: 1, opacity: 1 }} 
+            <motion.img
+              initial={{ scale: 0.9, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
               exit={{ scale: 0.9, opacity: 0 }}
               transition={{ type: 'spring', damping: 25, stiffness: 300 }}
-              src={expandedImage} 
-              className="max-w-full max-h-[90vh] object-contain rounded-xl shadow-2xl" 
+              src={expandedImage}
+              className="max-w-full max-h-[90vh] object-contain rounded-xl shadow-2xl"
               onClick={(e) => e.stopPropagation()}
             />
           </div>
