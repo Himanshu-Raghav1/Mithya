@@ -1,7 +1,7 @@
 import { useState, useRef } from 'react';
 import { motion } from 'framer-motion';
 import { QRCodeCanvas } from 'qrcode.react';
-import { QrCode, Download, Link as LinkIcon, MessageSquare, AlertCircle } from 'lucide-react';
+import { QrCode, Download, Link as LinkIcon, MessageSquare } from 'lucide-react';
 
 export default function QRGenerator() {
   const [mode, setMode] = useState<'link' | 'message'>('link');
@@ -17,17 +17,17 @@ export default function QRGenerator() {
       try {
         const url = new URL(inputValue);
         if (url.search) {
-          url.searchParams.set('made_by', 'team_mithya');
+          url.searchParams.set('qr_made_by', 'mithya');
         } else {
-          url.search = '?made_by=team_mithya';
+          url.search = '?qr_made_by=mithya';
         }
         return url.toString();
       } catch (e) {
         // If it's not a perfectly valid format yet (e.g., user is typing) or they left out 'http://'
         // we'll attempt a soft append for when they scan it.
         const safeVal = inputValue.trim();
-        if (safeVal.includes('?')) return safeVal + '&made_by=team_mithya';
-        return safeVal + '?made_by=team_mithya';
+        if (safeVal.includes('?')) return safeVal + '&qr_made_by=mithya';
+        return safeVal + '?qr_made_by=mithya';
       }
     } else {
       // Secret Message Mode
@@ -40,7 +40,7 @@ export default function QRGenerator() {
   const handleDownload = () => {
     if (!canvasRef.current) return;
     const canvas = canvasRef.current;
-    
+
     // Convert directly to high-quality JPG
     const url = canvas.toDataURL('image/jpeg', 1.0);
 
@@ -108,7 +108,7 @@ export default function QRGenerator() {
             />
           </div>
         )}
-        
+
         {/* Cooking Process Indicator */}
         {inputValue.trim().length > 0 && (
           <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="mt-4 text-center">
@@ -142,14 +142,6 @@ export default function QRGenerator() {
           </div>
 
           <div className="mt-6 text-center z-10 w-full">
-            <div className="flex items-start gap-2 bg-purple-900/40 border border-purple-500/30 p-3 rounded-lg mb-4 text-left">
-              <AlertCircle className="w-5 h-5 text-purple-400 flex-shrink-0 mt-0.5" />
-              <div>
-                <p className="text-white/90 text-xs font-bold mb-1">What happens when scanned?</p>
-                <p className="text-purple-200/70 text-[10px] break-all">{finalQRValue}</p>
-              </div>
-            </div>
-
             <button
               onClick={handleDownload}
               className="bg-white text-black font-black px-8 py-3 rounded-xl hover:bg-gray-200 transition-transform active:scale-95 flex items-center gap-2 mx-auto"
