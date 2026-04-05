@@ -28,6 +28,7 @@ voice_collection = db['mithya_voice']
 lost_found_collection = db['lost_and_found']
 events_collection = db['mithya_events']
 pyqs_collection = db['pyqs_notes']
+pinboard_collection = db['mithya_pinboard']
 contacts_collection = db['important_contacts']
 users_collection    = db['mithya_users']
 
@@ -440,6 +441,58 @@ def submit_pyq():
             "message": "Note submitted successfully! Waiting for Admin approval.",
             "data": new_note
         })
+    except Exception as e:
+        return jsonify({"success": False, "message": str(e)})
+
+# ==========================================
+# 📌 PIN BOARD
+# ==========================================
+@app.route('/api/pinboard', methods=['GET'])
+def get_pinboard():
+    try:
+        pins = list(pinboard_collection.find({}, {"_id": 0}).sort("timestamp", -1))
+        return jsonify({"success": True, "data": pins})
+    except Exception as e:
+        return jsonify({"success": False, "message": str(e)})
+
+@app.route('/api/admin/pinboard', methods=['POST'])
+@require_admin
+def create_pin():
+    try:
+        data = request.json
+        if not data or not data.get('image_url'):
+            return jsonify({"success": False, "message": "Missing image url"}), 400
+        new_pin = {
+            "id": str(uuid.uuid4()),
+            "image_url": data['image_url'],
+            "caption": data.get('caption', '').strip(),
+            "timestamp": utcnow()
+        }
+        pinboard_collection.insert_one(new_pin)
+        new_pin.pop('_id', None)
+        return jsonify({"success": True, "data": new_pin})
+    except Exception as e:
+        return jsonify({"success": False, "message": str(e)})
+
+@app.route('/api/admin/pinboard/<pin_id>', methods=['DELETE'])
+@require_admin
+def delete_pin(pin_id):
+    try:
+        result = pinboard_collection.delete_one({"id": pin_id})
+        if result.deleted_count == 0:
+            return jsonify({"success": False, "message": "Pin not found"}), 404
+        return jsonify({"success": True, "message": "Pin deleted"})
+    except Exception as e:
+        return jsonify({"success": False, "message": str(e)})
+
+@app.route('/api/admin/events/<event_id>', methods=['DELETE'])
+@require_admin
+def delete_admin_event(event_id):
+    try:
+        result = events_collection.delete_one({"id": event_id})
+        if result.deleted_count == 0:
+            return jsonify({"success": False, "message": "Event not found"}), 404
+        return jsonify({"success": True, "message": "Event deleted"})
     except Exception as e:
         return jsonify({"success": False, "message": str(e)})
 

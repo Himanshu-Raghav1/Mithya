@@ -105,7 +105,8 @@ export type TabId =
   | 'lostfound'
   | 'pyqs'
   | 'admin'
-  | 'personalized';
+  | 'personalized'
+  | 'pinboard';
 
 /** A PYQ / Note submission */
 export interface PyqNote {
@@ -129,5 +130,13 @@ export interface LostItem {
   phone_number: string;
   type: 'Lost' | 'Found';
   image_url?: string;
+  timestamp: string;
+}
+
+/** A Pin Board item */
+export interface PinItem {
+  id: string;
+  image_url: string;
+  caption: string;
   timestamp: string;
 }

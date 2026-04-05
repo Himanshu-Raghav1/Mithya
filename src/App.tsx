@@ -13,6 +13,7 @@ import LostFound from './features/LostFound';
 import PYQsNotes from './features/PYQsNotes';
 import AdminPortal from './features/AdminPortal';
 import PersonalizedSpace from './features/PersonalizedSpace';
+import PinBoard from './features/PinBoard';
 
 import type { TabId } from './types';
 
@@ -32,6 +33,7 @@ export default function App() {
       case 'lostfound':return <LostFound />;
       case 'pyqs':     return <PYQsNotes />;
       case 'personalized': return <PersonalizedSpace />;
+      case 'pinboard': return <PinBoard />;
       case 'admin':    return <AdminPortal />;
     }
   };

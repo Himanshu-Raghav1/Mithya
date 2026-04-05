@@ -13,12 +13,13 @@ interface NavbarProps {
 const tabs: { id: TabId; label: string; emoji: string }[] = [
   { id: 'sports', label: 'Live Sports', emoji: '🏆' },
   { id: 'voice', label: 'MITVoice', emoji: '🎙️' },
-  { id: 'quicklinks', label: 'Quick Links', emoji: '🔗' },
-  { id: 'events', label: 'Concerts & Events', emoji: '🎵' },
-  { id: 'contacts', label: 'Contacts', emoji: '📞' },
-  { id: 'lostfound', label: 'Lost & Found', emoji: '🔍' },
   { id: 'pyqs', label: 'PYQs & Notes', emoji: '📚' },
+  { id: 'lostfound', label: 'Lost & Found', emoji: '🔍' },
   { id: 'personalized', label: 'Private Space', emoji: '🔐' },
+  { id: 'events', label: 'Concerts & Events', emoji: '🎵' },
+  { id: 'pinboard', label: 'Pin Board', emoji: '📌' },
+  { id: 'contacts', label: 'Contacts', emoji: '📞' },
+  { id: 'quicklinks', label: 'Quick Links', emoji: '🔗' },
   { id: 'admin', label: 'Admin Portal', emoji: '🔒' }
 ];
 

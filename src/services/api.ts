@@ -177,6 +177,56 @@ export async function createEvent(payload: Partial<import('../types').EventItem>
   }
 }
 
+export async function deleteEvent(eventId: string, token: string): Promise<ApiResponse<any>> {
+  try {
+    const res = await fetch(`${API_BASE_URL}/api/admin/events/${eventId}`, {
+      method: 'DELETE',
+      headers: { 'Authorization': `Bearer ${token}` }
+    });
+    return await res.json();
+  } catch {
+    return { success: false, message: 'Failed to delete event' };
+  }
+}
+
+// ==========================================
+// 📌 PIN BOARD
+// ==========================================
+
+export async function getPinboard(): Promise<ApiResponse<import('../types').PinItem[]>> {
+  try {
+    const res = await fetch(`${API_BASE_URL}/api/pinboard`);
+    return await res.json();
+  } catch {
+    return { success: false, message: 'Failed to fetch pin board' };
+  }
+}
+
+export async function createPin(image_url: string, caption: string, token: string): Promise<ApiResponse<import('../types').PinItem>> {
+  try {
+    const res = await fetch(`${API_BASE_URL}/api/admin/pinboard`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+      body: JSON.stringify({ image_url, caption })
+    });
+    return await res.json();
+  } catch {
+    return { success: false, message: 'Failed to create pin' };
+  }
+}
+
+export async function deletePin(pinId: string, token: string): Promise<ApiResponse<any>> {
+  try {
+    const res = await fetch(`${API_BASE_URL}/api/admin/pinboard/${pinId}`, {
+      method: 'DELETE',
+      headers: { 'Authorization': `Bearer ${token}` }
+    });
+    return await res.json();
+  } catch {
+    return { success: false, message: 'Failed to delete pin' };
+  }
+}
+
 // ==========================================
 // 📚 PYQs & NOTES + ADMIN (MONGODB API)
 // ==========================================

@@ -1,13 +1,18 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ShieldCheck, LogOut, CheckCircle2, XCircle, Trash2, Plus, Loader2, Link as LinkIcon, GlobeLock, Book, MessageSquare, Phone } from 'lucide-react';
+import { 
+  ShieldCheck, LogOut, CheckCircle2, XCircle, Trash2, Plus, 
+  Loader2, Link as LinkIcon, GlobeLock, Book, MessageSquare, 
+  Phone, Calendar, Pin, Upload 
+} from 'lucide-react';
 import { 
   verifyAdmin, getPendingPyqs, moderatePyq, 
   getForumPosts, deleteVoicePost, deleteVoiceComment,
-  getContacts, createContact, deleteContact
+  getContacts, createContact, deleteContact,
+  getEvents, deleteEvent, getPinboard, createPin, deletePin
 } from '../services/api';
-
-import type { ContactCategory, ForumPost, Contact } from '../types';
+import { uploadToCloudinary } from '../services/cloudinary';
+import type { ContactCategory, ForumPost, Contact, EventItem, PinItem } from '../types';
 
 export default function AdminPortal() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
@@ -15,27 +20,37 @@ export default function AdminPortal() {
   const [password, setPassword] = useState('');
   const [authLoading, setAuthLoading] = useState(false);
   
-  const [activeTab, setActiveTab] = useState<'pyqs' | 'voice' | 'contacts'>('pyqs');
+  const [activeTab, setActiveTab] = useState<'pyqs' | 'voice' | 'contacts' | 'events' | 'pinboard'>('pyqs');
 
-  // PYQs State
+  // PYQs
   const [pendingNotes, setPendingNotes] = useState<any[]>([]);
   const [loadingPyqs, setLoadingPyqs] = useState(false);
 
-  // MITVoice State
+  // MITVoice
   const [posts, setPosts] = useState<ForumPost[]>([]);
   const [loadingVoice, setLoadingVoice] = useState(false);
 
-  // Contacts State
+  // Contacts
   const [contacts, setContacts] = useState<Contact[]>([]);
   const [loadingContacts, setLoadingContacts] = useState(false);
-
-  // New Contact Form State
   const [cName, setCName] = useState('');
   const [cRole, setCRole] = useState('');
   const [cDept, setCDept] = useState('');
   const [cEmail, setCEmail] = useState('');
   const [cPhone, setCPhone] = useState('');
   const [cCategory, setCCategory] = useState<ContactCategory>('Dean');
+
+  // Events
+  const [events, setEvents] = useState<EventItem[]>([]);
+  const [loadingEvents, setLoadingEvents] = useState(false);
+
+  // Pin Board
+  const [pins, setPins] = useState<PinItem[]>([]);
+  const [loadingPins, setLoadingPins] = useState(false);
+  const [pinImage, setPinImage] = useState<File | null>(null);
+  const [pinCaption, setPinCaption] = useState('');
+  const [isUploadingPin, setIsUploadingPin] = useState(false);
+  const pinFileInputRef = useRef<HTMLInputElement>(null);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -44,14 +59,13 @@ export default function AdminPortal() {
     if (res.success && res.token) {
       sessionStorage.setItem('admin_token', res.token);
       setIsAuthenticated(true);
-      loadPyqs(); // Load initial data
+      loadPyqs();
     } else {
       alert(`Invalid credentials: ${res.message || "User ID is required."}`);
     }
     setAuthLoading(false);
   };
 
-  // --- Loaders ---
   const loadPyqs = async () => {
     setLoadingPyqs(true);
     const token = sessionStorage.getItem('admin_token') || '';
@@ -74,15 +88,29 @@ export default function AdminPortal() {
     setLoadingContacts(false);
   };
 
-  // Load data when tab changes
+  const loadEvents = async () => {
+    setLoadingEvents(true);
+    const res = await getEvents();
+    if (res.success && res.data) setEvents(res.data);
+    setLoadingEvents(false);
+  };
+
+  const loadPins = async () => {
+    setLoadingPins(true);
+    const res = await getPinboard();
+    if (res.success && res.data) setPins(res.data);
+    setLoadingPins(false);
+  };
+
   useEffect(() => {
     if (!isAuthenticated) return;
     if (activeTab === 'pyqs') loadPyqs();
     if (activeTab === 'voice') loadVoice();
     if (activeTab === 'contacts') loadContacts();
+    if (activeTab === 'events') loadEvents();
+    if (activeTab === 'pinboard') loadPins();
   }, [activeTab, isAuthenticated]);
 
-  // --- Actions ---
   const handleModeratePyq = async (id: string, action: 'approve' | 'reject') => {
     const token = sessionStorage.getItem('admin_token') || '';
     const res = await moderatePyq(id, action, token);
@@ -95,9 +123,7 @@ export default function AdminPortal() {
     if (!confirm("Are you sure you want to delete this post instantly?")) return;
     const token = sessionStorage.getItem('admin_token') || '';
     const res = await deleteVoicePost(id, token);
-    if (res.success) {
-      setPosts(prev => prev.filter(p => p.id !== id));
-    }
+    if (res.success) setPosts(prev => prev.filter(p => p.id !== id));
   };
 
   const handleDeleteComment = async (postId: string, commentId: string) => {
@@ -105,20 +131,13 @@ export default function AdminPortal() {
     const token = sessionStorage.getItem('admin_token') || '';
     const res = await deleteVoiceComment(postId, commentId, token);
     if (res.success) {
-      setPosts(prev => prev.map(p => {
-        if (p.id === postId) {
-          return { ...p, comments: p.comments.filter(c => c.id !== commentId) };
-        }
-        return p;
-      }));
+      setPosts(prev => prev.map(p => p.id === postId ? { ...p, comments: p.comments.filter(c => c.id !== commentId) } : p));
     }
   };
 
   const handleAddContact = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!cName || !cCategory) return;
-    
-    // Optimistic UI for form reset
     const token = sessionStorage.getItem('admin_token') || '';
     const payload: Partial<Contact> = { name: cName, role: cRole, department: cDept, email: cEmail, phone: cPhone, category: cCategory };
     const res = await createContact(payload, token);
@@ -132,12 +151,51 @@ export default function AdminPortal() {
     if (!confirm("Remove this contact from the public directory?")) return;
     const token = sessionStorage.getItem('admin_token') || '';
     const res = await deleteContact(id, token);
+    if (res.success) setContacts(prev => prev.filter(c => c.id !== id));
+  };
+
+  const handleDeleteAdminEvent = async (id: string) => {
+    if (!confirm("Are you sure you want to permanently delete this event?")) return;
+    const token = sessionStorage.getItem('admin_token') || '';
+    const res = await deleteEvent(id, token);
     if (res.success) {
-      setContacts(prev => prev.filter(c => c.id !== id));
+      setEvents(prev => prev.filter(e => e.id !== id));
+    } else {
+      alert("Failed to delete event: " + res.message);
     }
   };
 
-  // --- RENDER UN-AUTHED ---
+  const handleUploadPin = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!pinImage) return alert("Select an image first!");
+    
+    setIsUploadingPin(true);
+    try {
+      const cloudinaryUrl = await uploadToCloudinary(pinImage);
+      const token = sessionStorage.getItem('admin_token') || '';
+      const res = await createPin(cloudinaryUrl, pinCaption, token);
+      if (res.success && res.data) {
+         setPins([res.data, ...pins]);
+         setPinImage(null);
+         setPinCaption('');
+         if (pinFileInputRef.current) pinFileInputRef.current.value = '';
+      } else {
+         alert("Failed to create pin: " + res.message);
+      }
+    } catch (err: any) {
+      alert("Error: " + err.message);
+    } finally {
+      setIsUploadingPin(false);
+    }
+  };
+
+  const handleDeletePin = async (id: string) => {
+    if (!confirm("Remove this photo from Pin Board?")) return;
+    const token = sessionStorage.getItem('admin_token') || '';
+    const res = await deletePin(id, token);
+    if (res.success) setPins(prev => prev.filter(p => p.id !== id));
+  };
+
   if (!isAuthenticated) {
     return (
       <div className="p-4 flex flex-col items-center justify-center min-h-[80vh]">
@@ -162,7 +220,6 @@ export default function AdminPortal() {
     );
   }
 
-  // --- RENDER AUTHED ---
   return (
     <div className="p-4 max-w-4xl mx-auto space-y-4 pb-24">
       {/* Header */}
@@ -189,7 +246,13 @@ export default function AdminPortal() {
           <MessageSquare className="w-4 h-4" /> MITVoice Moderation
         </button>
         <button onClick={() => setActiveTab('contacts')} className={`flex items-center gap-2 px-4 py-2.5 rounded-xl font-bold transition-colors flex-shrink-0 ${activeTab === 'contacts' ? 'bg-blue-500 text-white' : 'bg-white/5 text-white/60 hover:text-white hover:bg-white/10'}`}>
-          <Phone className="w-4 h-4" /> Contacts Directory
+          <Phone className="w-4 h-4" /> Directory
+        </button>
+        <button onClick={() => setActiveTab('events')} className={`flex items-center gap-2 px-4 py-2.5 rounded-xl font-bold transition-colors flex-shrink-0 ${activeTab === 'events' ? 'bg-blue-500 text-white' : 'bg-white/5 text-white/60 hover:text-white hover:bg-white/10'}`}>
+          <Calendar className="w-4 h-4" /> Events
+        </button>
+        <button onClick={() => setActiveTab('pinboard')} className={`flex items-center gap-2 px-4 py-2.5 rounded-xl font-bold transition-colors flex-shrink-0 ${activeTab === 'pinboard' ? 'bg-blue-500 text-white' : 'bg-white/5 text-white/60 hover:text-white hover:bg-white/10'}`}>
+          <Pin className="w-4 h-4" /> Pin Board
         </button>
       </div>
 
@@ -261,29 +324,22 @@ export default function AdminPortal() {
         {/* PANEL: CONTACTS */}
         {activeTab === 'contacts' && (
            <motion.div key="contacts" initial={{opacity:0, y:10}} animate={{opacity:1, y:0}} exit={{opacity:0}} className="space-y-6">
-             
-             {/* Add New Form */}
              <div className="glass-card p-5 border border-green-500/30 bg-green-900/10">
-               <h3 className="font-black text-white mb-3 flex items-center gap-2"><Plus className="w-4 h-4 text-green-400"/> Add New Contact Directory Entry</h3>
+               <h3 className="font-black text-white mb-3 flex items-center gap-2"><Plus className="w-4 h-4 text-green-400"/> Add New Contact</h3>
                <form onSubmit={handleAddContact} className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                 <input required value={cName} onChange={e=>setCName(e.target.value)} type="text" placeholder="Name (e.g. Dr. Patil)" className="bg-black/30 border border-white/10 rounded-lg px-3 py-2 text-sm text-white outline-none focus:border-green-400" />
-                 <input value={cRole} onChange={e=>setCRole(e.target.value)} type="text" placeholder="Role (e.g. Associate Dean)" className="bg-black/30 border border-white/10 rounded-lg px-3 py-2 text-sm text-white outline-none focus:border-green-400" />
-                 <input value={cDept} onChange={e=>setCDept(e.target.value)} type="text" placeholder="Department (e.g. SOC)" className="bg-black/30 border border-white/10 rounded-lg px-3 py-2 text-sm text-white outline-none focus:border-green-400" />
-                 <input value={cPhone} onChange={e=>setCPhone(e.target.value)} type="tel" placeholder="Phone Number" className="bg-black/30 border border-white/10 rounded-lg px-3 py-2 text-sm text-white outline-none focus:border-green-400" />
-                 <input value={cEmail} onChange={e=>setCEmail(e.target.value)} type="email" placeholder="Email Address" className="bg-black/30 border border-white/10 rounded-lg px-3 py-2 text-sm text-white outline-none focus:border-green-400" />
+                 <input required value={cName} onChange={e=>setCName(e.target.value)} type="text" placeholder="Name" className="bg-black/30 border border-white/10 rounded-lg px-3 py-2 text-sm text-white outline-none focus:border-green-400" />
+                 <input value={cRole} onChange={e=>setCRole(e.target.value)} type="text" placeholder="Role" className="bg-black/30 border border-white/10 rounded-lg px-3 py-2 text-sm text-white outline-none focus:border-green-400" />
+                 <input value={cDept} onChange={e=>setCDept(e.target.value)} type="text" placeholder="Department" className="bg-black/30 border border-white/10 rounded-lg px-3 py-2 text-sm text-white outline-none focus:border-green-400" />
+                 <input value={cPhone} onChange={e=>setCPhone(e.target.value)} type="tel" placeholder="Phone" className="bg-black/30 border border-white/10 rounded-lg px-3 py-2 text-sm text-white outline-none focus:border-green-400" />
+                 <input value={cEmail} onChange={e=>setCEmail(e.target.value)} type="email" placeholder="Email" className="bg-black/30 border border-white/10 rounded-lg px-3 py-2 text-sm text-white outline-none focus:border-green-400" />
                  <div className="flex gap-2">
                    <select value={cCategory} onChange={e=>setCCategory(e.target.value as ContactCategory)} className="flex-1 bg-black/30 border border-white/10 rounded-lg px-3 py-2 text-sm text-white outline-none focus:border-green-400">
-                     <option value="Dean">Dean</option>
-                     <option value="Faculty">Faculty</option>
-                     <option value="Admin">Admin</option>
-                     <option value="Emergency">Emergency</option>
+                     <option value="Dean">Dean</option><option value="Faculty">Faculty</option><option value="Admin">Admin</option><option value="Emergency">Emergency</option>
                    </select>
                    <button type="submit" className="bg-green-500 text-white font-bold px-4 py-2 rounded-lg hover:bg-green-400 transition-colors">ADD</button>
                  </div>
                </form>
              </div>
-
-             {/* Live Directory List */}
              <div className="space-y-2">
                {loadingContacts ? <p className="text-white/50 text-center py-4">Fetching directory...</p> : contacts.map(contact => (
                  <div key={contact.id} className="flex flex-col sm:flex-row justify-between items-center bg-black/40 border border-white/10 p-3 rounded-xl gap-4">
@@ -293,15 +349,61 @@ export default function AdminPortal() {
                        <p className="text-white font-bold text-sm leading-none">{contact.name}</p>
                        <p className="text-white/50 text-[10px] mt-1">{contact.role} {contact.department ? `· ${contact.department}` : ''}</p>
                      </div>
-                     <div className="text-xs text-white/70 space-y-0.5">
-                       {contact.phone && <p>📞 {contact.phone}</p>}
-                       {contact.email && <p>✉️ {contact.email}</p>}
-                     </div>
                    </div>
-                   <button onClick={() => handleDeleteContact(contact.id!)} className="w-full sm:w-auto p-2 bg-red-500/10 text-red-400 rounded-lg hover:bg-red-500/30 transition-colors flex items-center justify-center"><Trash2 className="w-4 h-4" /></button>
+                   <button onClick={() => handleDeleteContact(contact.id!)} className="w-full sm:w-auto p-2 bg-red-500/10 text-red-400 rounded-lg hover:bg-red-500/30 transition-colors"><Trash2 className="w-4 h-4" /></button>
                  </div>
                ))}
              </div>
+           </motion.div>
+        )}
+
+        {/* PANEL: EVENTS */}
+        {activeTab === 'events' && (
+           <motion.div key="events" initial={{opacity:0, y:10}} animate={{opacity:1, y:0}} exit={{opacity:0}} className="space-y-4">
+             {loadingEvents ? <p className="text-white/50 text-center py-8">Fetching events...</p> : events.length === 0 ? (
+               <div className="glass-card p-12 text-center border border-white/10"><p className="text-white/60 font-bold">No upcoming events.</p></div>
+             ) : events.map(event => (
+               <div key={event.id} className="flex flex-col sm:flex-row justify-between items-center bg-black/40 border border-white/10 p-4 rounded-xl gap-4">
+                 <div className="flex-1 flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-6 w-full">
+                   <span className="text-4xl">{event.icon}</span>
+                   <div>
+                     <p className="text-white font-bold text-base leading-none">{event.title}</p>
+                     <p className="text-white/50 text-xs mt-1">{event.date} · {event.tag}</p>
+                   </div>
+                 </div>
+                 <button onClick={() => handleDeleteAdminEvent(event.id!)} className="w-full sm:w-auto p-2 bg-red-500/10 text-red-400 rounded-lg hover:bg-red-500/30 transition-colors flex items-center justify-center gap-2"><Trash2 className="w-4 h-4" /> Delete</button>
+               </div>
+             ))}
+           </motion.div>
+        )}
+
+        {/* PANEL: PIN BOARD */}
+        {activeTab === 'pinboard' && (
+           <motion.div key="pinboard" initial={{opacity:0, y:10}} animate={{opacity:1, y:0}} exit={{opacity:0}} className="space-y-6">
+             <div className="glass-card p-5 border border-yellow-500/30 bg-yellow-900/10">
+               <h3 className="font-black text-white mb-3 flex items-center gap-2"><Upload className="w-4 h-4 text-yellow-400"/> Upload to Pin Board</h3>
+               <form onSubmit={handleUploadPin} className="space-y-3">
+                 <div className="flex items-center gap-4">
+                   <input type="file" accept="image/*" onChange={(e) => setPinImage(e.target.files?.[0] || null)} ref={pinFileInputRef} className="text-sm text-white/70" />
+                 </div>
+                 <input value={pinCaption} onChange={e=>setPinCaption(e.target.value)} type="text" placeholder="Caption (optional)" className="w-full bg-black/30 border border-white/10 rounded-lg px-3 py-2 text-sm text-white outline-none focus:border-yellow-400" />
+                 <button type="submit" disabled={isUploadingPin} className="bg-yellow-500 text-black font-bold px-4 py-2 rounded-lg hover:bg-yellow-400 transition-colors flex items-center gap-2 disabled:opacity-50">
+                    {isUploadingPin ? <><Loader2 className="w-4 h-4 animate-spin"/> Uploading...</> : <><Pin className="w-4 h-4"/> Pin to Board</>}
+                 </button>
+               </form>
+             </div>
+             
+             {loadingPins ? <p className="text-white/50 text-center py-8">Fetching pins...</p> : (
+               <div className="columns-1 sm:columns-2 gap-4 space-y-4">
+                 {pins.map(pin => (
+                   <div key={pin.id} className="break-inside-avoid relative group rounded-xl overflow-hidden border border-white/10">
+                     <img src={pin.image_url} alt="Pin" className="w-full h-auto" />
+                     {pin.caption && <div className="absolute bottom-0 w-full bg-black/70 p-2 text-xs text-white pb-3">{pin.caption}</div>}
+                     <button onClick={() => handleDeletePin(pin.id!)} className="absolute top-2 right-2 p-1.5 bg-red-500 text-white rounded-md opacity-0 group-hover:opacity-100 transition-opacity"><Trash2 className="w-4 h-4"/></button>
+                   </div>
+                 ))}
+               </div>
+             )}
            </motion.div>
         )}
 
