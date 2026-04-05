@@ -65,9 +65,11 @@ export async function searchSportsSlots(game: string): Promise<ApiResponse<SlotR
 // 🗣️ MITVOICE (MONGODB API)
 // ==========================================
 
-export async function getForumPosts(): Promise<ApiResponse<ForumPost[]>> {
+export async function getForumPosts(token?: string): Promise<ApiResponse<ForumPost[]>> {
   try {
-    const res = await fetch(`${API_BASE_URL}/api/voice/posts`);
+    const headers: Record<string, string> = {};
+    if (token) headers['Authorization'] = `Bearer ${token}`;
+    const res = await fetch(`${API_BASE_URL}/api/voice/posts`, { headers });
     return await res.json() as ApiResponse<ForumPost[]>;
   } catch {
     return { success: false, message: 'Failed to fetch posts' };

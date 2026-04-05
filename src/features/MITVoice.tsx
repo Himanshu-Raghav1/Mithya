@@ -38,7 +38,7 @@ function timeAgo(dateString: string): string {
 }
 
 export default function MITVoice() {
-  const { user, token } = useAuth();
+  const { user, token, isLoading: authLoading } = useAuth();
   const [showAuth, setShowAuth] = useState(false);
   const [posts, setPosts] = useState<ForumPost[]>([]);
   const [loading, setLoading] = useState(true);
@@ -52,9 +52,9 @@ export default function MITVoice() {
   const [isUploading, setIsUploading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  // Load from MongoDB
+  // Load from MongoDB — pass token so backend knows which posts I've liked
   const loadPosts = async () => {
-    const res = await getForumPosts();
+    const res = await getForumPosts(token || undefined);
     if (res.success && res.data) {
       setPosts(res.data);
     }
@@ -62,8 +62,10 @@ export default function MITVoice() {
   };
 
   useEffect(() => {
-    loadPosts();
-  }, []);
+    if (!authLoading) {
+      loadPosts();
+    }
+  }, [authLoading, token]);
 
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {

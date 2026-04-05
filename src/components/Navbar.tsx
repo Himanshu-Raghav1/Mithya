@@ -21,108 +21,214 @@ const tabs: { id: TabId; label: string; emoji: string }[] = [
   { id: 'admin', label: 'Admin Portal', emoji: '🔒' }
 ];
 
+// Bottom bar shows only the 5 most-used tabs on mobile
+const bottomTabs: { id: TabId; label: string; emoji: string }[] = [
+  { id: 'sports',      label: 'Sports',  emoji: '🏆' },
+  { id: 'voice',       label: 'Voice',   emoji: '🎙️' },
+  { id: 'pyqs',        label: 'PYQs',    emoji: '📚' },
+  { id: 'lostfound',   label: 'Lost',    emoji: '🔍' },
+  { id: 'personalized',label: 'Private', emoji: '🔐' },
+];
+
 export default function Navbar({ activeTab, onTabChange }: NavbarProps) {
   const { user, logout } = useAuth();
   const [showAuth, setShowAuth]     = useState(false);
   const [showLogout, setShowLogout] = useState(false);
 
   return (
-    <nav
-      className="sticky top-0 z-40 w-full"
-      style={{
-        background: 'rgba(0, 60, 120, 0.45)',
-        backdropFilter: 'blur(20px)',
-        WebkitBackdropFilter: 'blur(20px)',
-        borderBottom: '1px solid rgba(255,255,255,0.15)',
-      }}
-    >
-      {/* Title bar */}
-      <div className="flex items-center justify-between px-4 py-3">
-        <div className="flex items-center gap-2">
-          <img
-            src="/logo.png"
-            alt="Mithya Logo"
-            className="w-9 h-9 rounded-full object-cover"
-            onError={(e) => { e.currentTarget.style.display='none'; }}
-          />
-          <h1
-            className="text-2xl font-black tracking-widest"
-            style={{
-              background: 'linear-gradient(135deg, #FFD740 0%, #ffffff 50%, #4FC3F7 100%)',
-              WebkitBackgroundClip: 'text',
-              WebkitTextFillColor: 'transparent',
-              backgroundClip: 'text',
-              textShadow: 'none',
-            }}
-          >
-            MITHYA
-          </h1>
-        </div>
-        <div className="flex items-center gap-2">
-          {!user ? (
-            <button
-              onClick={() => setShowAuth(true)}
-              className="px-3 py-1.5 rounded-xl text-[11px] font-black text-yellow-400 bg-yellow-400/10 hover:bg-yellow-400/20 border border-yellow-400/20 transition-colors"
+    <>
+      {/* ── TOP NAV BAR (visible on all screens) ─────────────── */}
+      <nav
+        className="sticky top-0 z-40 w-full"
+        style={{
+          background: 'rgba(0, 60, 120, 0.45)',
+          backdropFilter: 'blur(20px)',
+          WebkitBackdropFilter: 'blur(20px)',
+          borderBottom: '1px solid rgba(255,255,255,0.15)',
+        }}
+      >
+        {/* Title bar */}
+        <div className="flex items-center justify-between px-4 py-3">
+          <div className="flex items-center gap-2">
+            <img
+              src="/logo.png"
+              alt="Mithya Logo"
+              className="w-9 h-9 rounded-full object-cover"
+              onError={(e) => { e.currentTarget.style.display='none'; }}
+            />
+            <h1
+              className="text-2xl font-black tracking-widest"
+              style={{
+                background: 'linear-gradient(135deg, #FFD740 0%, #ffffff 50%, #4FC3F7 100%)',
+                WebkitBackgroundClip: 'text',
+                WebkitTextFillColor: 'transparent',
+                backgroundClip: 'text',
+                textShadow: 'none',
+              }}
             >
-              Login
-            </button>
-          ) : (
-            <div className="relative">
+              MITHYA
+            </h1>
+          </div>
+          <div className="flex items-center gap-2">
+            {!user ? (
               <button
-                onClick={() => setShowLogout(v => !v)}
-                className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white/10 hover:bg-white/15 transition-colors text-white text-[11px] font-black"
+                onClick={() => setShowAuth(true)}
+                className="px-3 py-1.5 rounded-xl text-[11px] font-black text-yellow-400 bg-yellow-400/10 hover:bg-yellow-400/20 border border-yellow-400/20 transition-colors"
               >
-                <span className="text-yellow-300">@</span>{user.anon_name}
+                Login
               </button>
-              {showLogout && (
-                <div className="absolute right-0 top-10 bg-[#0d1333] border border-white/15 rounded-xl p-2 z-50 w-40 shadow-xl">
-                  <p className="text-white/30 text-[10px] px-2 pb-1 truncate">{user.email}</p>
-                  <button
-                    onClick={() => { logout(); setShowLogout(false); }}
-                    className="w-full text-left px-3 py-2 text-xs font-bold text-red-400 hover:bg-red-400/10 rounded-lg transition-colors"
-                  >
-                    Logout
-                  </button>
-                </div>
+            ) : (
+              <div className="relative">
+                <button
+                  onClick={() => setShowLogout(v => !v)}
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white/10 hover:bg-white/15 transition-colors text-white text-[11px] font-black"
+                >
+                  <span className="text-yellow-300">@</span>{user.anon_name}
+                </button>
+                {showLogout && (
+                  <div className="absolute right-0 top-10 bg-[#0d1333] border border-white/15 rounded-xl p-2 z-50 w-40 shadow-xl">
+                    <p className="text-white/30 text-[10px] px-2 pb-1 truncate">{user.email}</p>
+                    <button
+                      onClick={() => { logout(); setShowLogout(false); }}
+                      className="w-full text-left px-3 py-2 text-xs font-bold text-red-400 hover:bg-red-400/10 rounded-lg transition-colors"
+                    >
+                      Logout
+                    </button>
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+        </div>
+
+        {showAuth && <AuthModal onClose={() => setShowAuth(false)} />}
+
+        {/* Tab scroll bar — hidden on mobile (bottom bar takes over) */}
+        <div className="hidden sm:flex overflow-x-auto tab-scroll px-2 pb-2 gap-1">
+          {tabs.map((tab) => (
+            <motion.button
+              key={tab.id}
+              onClick={() => onTabChange(tab.id)}
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
+              className="relative flex-shrink-0 flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm font-bold transition-colors cursor-pointer"
+              style={{
+                color: activeTab === tab.id ? '#1a1a2e' : 'rgba(255,255,255,0.75)',
+                background: activeTab === tab.id
+                  ? 'linear-gradient(135deg, #FFD740, #FF9800)'
+                  : 'rgba(255,255,255,0.08)',
+                border: activeTab === tab.id
+                  ? '1px solid rgba(255,215,64,0.5)'
+                  : '1px solid rgba(255,255,255,0.1)',
+              }}
+            >
+              <span>{tab.emoji}</span>
+              <span className="whitespace-nowrap">{tab.label}</span>
+            </motion.button>
+          ))}
+        </div>
+
+        {/* Mobile: show only active tab name as breadcrumb */}
+        <div className="sm:hidden flex items-center px-4 pb-2">
+          <span className="text-white/50 text-xs font-bold">
+            {tabs.find(t => t.id === activeTab)?.emoji}{' '}
+            {tabs.find(t => t.id === activeTab)?.label}
+          </span>
+        </div>
+      </nav>
+
+      {/* ── BOTTOM TAB BAR — mobile only ─────────────────────── */}
+      <div
+        className="sm:hidden fixed bottom-0 left-0 right-0 z-50"
+        style={{
+          background: 'rgba(5, 15, 50, 0.95)',
+          backdropFilter: 'blur(20px)',
+          WebkitBackdropFilter: 'blur(20px)',
+          borderTop: '1px solid rgba(255,255,255,0.12)',
+          paddingBottom: 'env(safe-area-inset-bottom)',
+        }}
+      >
+        <div className="flex items-center justify-around px-2 py-1">
+          {bottomTabs.map((tab) => {
+            const isActive = activeTab === tab.id;
+            return (
+              <motion.button
+                key={tab.id}
+                onClick={() => onTabChange(tab.id)}
+                whileTap={{ scale: 0.88 }}
+                className="flex flex-col items-center justify-center gap-0.5 py-2 px-3 rounded-2xl flex-1 transition-all"
+                style={{
+                  background: isActive ? 'rgba(255,215,64,0.15)' : 'transparent',
+                  minHeight: '56px',
+                }}
+              >
+                <span style={{ fontSize: '22px', lineHeight: 1 }}>{tab.emoji}</span>
+                <span
+                  style={{
+                    fontSize: '9px',
+                    fontWeight: 800,
+                    letterSpacing: '0.03em',
+                    color: isActive ? '#FFD740' : 'rgba(255,255,255,0.45)',
+                  }}
+                >
+                  {tab.label}
+                </span>
+                {isActive && (
+                  <motion.div
+                    layoutId="bottom-tab-indicator"
+                    style={{
+                      width: '20px', height: '3px', borderRadius: '2px',
+                      background: 'linear-gradient(90deg, #FFD740, #FF9800)',
+                      marginTop: '2px',
+                    }}
+                  />
+                )}
+              </motion.button>
+            );
+          })}
+
+          {/* "More" button for the remaining tabs */}
+          <div className="relative flex-1">
+            <motion.button
+              whileTap={{ scale: 0.88 }}
+              onClick={() => onTabChange(
+                // Cycle through non-bottom tabs
+                (() => {
+                  const moreTabs = tabs.filter(t => !bottomTabs.find(b => b.id === t.id));
+                  const currentIdx = moreTabs.findIndex(t => t.id === activeTab);
+                  return moreTabs[(currentIdx + 1) % moreTabs.length]?.id || moreTabs[0].id;
+                })()
               )}
-            </div>
-          )}
+              className="flex flex-col items-center justify-center gap-0.5 py-2 px-3 rounded-2xl w-full"
+              style={{
+                background: !bottomTabs.find(b => b.id === activeTab) ? 'rgba(255,215,64,0.15)' : 'transparent',
+                minHeight: '56px',
+              }}
+            >
+              <span style={{ fontSize: '22px', lineHeight: 1 }}>
+                {!bottomTabs.find(b => b.id === activeTab)
+                  ? tabs.find(t => t.id === activeTab)?.emoji || '⋯'
+                  : '⋯'}
+              </span>
+              <span style={{
+                fontSize: '9px', fontWeight: 800, letterSpacing: '0.03em',
+                color: !bottomTabs.find(b => b.id === activeTab) ? '#FFD740' : 'rgba(255,255,255,0.45)',
+              }}>
+                {!bottomTabs.find(b => b.id === activeTab)
+                  ? tabs.find(t => t.id === activeTab)?.label?.slice(0, 6) || 'More'
+                  : 'More'}
+              </span>
+            </motion.button>
+          </div>
         </div>
       </div>
 
-      {showAuth && <AuthModal onClose={() => setShowAuth(false)} />}
-
-      {/* Tab scroll bar */}
-      <div className="flex overflow-x-auto tab-scroll px-2 pb-2 gap-1">
-        {tabs.map((tab) => (
-          <motion.button
-            key={tab.id}
-            onClick={() => onTabChange(tab.id)}
-            whileHover={{ scale: 1.05 }}
-            whileTap={{ scale: 0.95 }}
-            className="relative flex-shrink-0 flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm font-bold transition-colors cursor-pointer"
-            style={{
-              color: activeTab === tab.id ? '#1a1a2e' : 'rgba(255,255,255,0.75)',
-              background: activeTab === tab.id
-                ? 'linear-gradient(135deg, #FFD740, #FF9800)'
-                : 'rgba(255,255,255,0.08)',
-              border: activeTab === tab.id
-                ? '1px solid rgba(255,215,64,0.5)'
-                : '1px solid rgba(255,255,255,0.1)',
-            }}
-          >
-            <span>{tab.emoji}</span>
-            <span className="whitespace-nowrap">{tab.label}</span>
-            {activeTab === tab.id && (
-              <motion.div
-                layoutId="tab-active"
-                className="absolute inset-0 rounded-xl"
-                style={{ zIndex: -1 }}
-              />
-            )}
-          </motion.button>
-        ))}
-      </div>
-    </nav>
+      {/* Bottom padding so content is not hidden behind bottom bar on mobile */}
+      <style>{`
+        @media (max-width: 640px) {
+          #root > div { padding-bottom: 72px; }
+        }
+      `}</style>
+    </>
   );
 }

@@ -122,6 +122,27 @@ def search_game():
 def get_posts():
     try:
         posts = list(voice_collection.find({}, {"_id": 0}).sort("timestamp", -1))
+        
+        # Detect logged-in user to inject likedByMe / dislikedByMe flags
+        current_user_id = None
+        auth_header = request.headers.get('Authorization', '')
+        if auth_header.startswith('Bearer '):
+            try:
+                token = auth_header.replace('Bearer ', '')
+                payload = jwt.decode(token, SECRET_KEY, algorithms=["HS256"], options={"verify_aud": False})
+                current_user_id = payload.get('sub') or payload.get('user_id')
+            except Exception:
+                pass
+
+        for post in posts:
+            liked_by = post.get('liked_by', [])
+            disliked_by = post.get('disliked_by', [])
+            post['likedByMe'] = (current_user_id in liked_by) if current_user_id else False
+            post['dislikedByMe'] = (current_user_id in disliked_by) if current_user_id else False
+            # Don't expose the full arrays to the client
+            post.pop('liked_by', None)
+            post.pop('disliked_by', None)
+
         return jsonify({"success": True, "data": posts})
     except Exception as e:
         return jsonify({"success": False, "message": str(e)})

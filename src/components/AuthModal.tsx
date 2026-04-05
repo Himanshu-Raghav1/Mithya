@@ -1,9 +1,9 @@
-import { useState } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, Mail, KeyRound, User, Loader2, Shuffle } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
-import { sendOtp, verifyOtp } from '../services/authApi';
+import { sendOtp, verifyOtp, setAnonName } from '../services/authApi';
 
 const FUN_NAMES = [
   'StormWatcher', 'CafePhilosopher', 'MysticOwl', 'TechNinja',
@@ -12,7 +12,7 @@ const FUN_NAMES = [
   'RedPanda42', 'CryptoSage', 'IronLogic', 'VoidHunter',
 ];
 
-type Stage = 'email' | 'otp-new' | 'otp-returning';
+type Stage = 'email' | 'otp' | 'choose-name';
 
 interface AuthModalProps {
   onClose: () => void;
@@ -39,7 +39,6 @@ export default function AuthModal({ onClose, reason }: AuthModalProps) {
     setError('');
     let finalEmail = email.trim().toLowerCase();
     
-    // Auto-append @mitwpu.edu.in if they just typed their PRN number or Name
     if (!finalEmail.includes('@')) {
       finalEmail = `${finalEmail}@mitwpu.edu.in`;
     }
@@ -52,7 +51,7 @@ export default function AuthModal({ onClose, reason }: AuthModalProps) {
     try {
       const res = await sendOtp(finalEmail);
       if (!res.success) return setError(res.message);
-      setStage(res.is_new ? 'otp-new' : 'otp-returning');
+      setStage('otp');
     } catch (err: any) { 
       console.error(err);
       setError(err?.message || 'Network error connecting to Supabase. Check your browser connection.'); 
@@ -63,16 +62,37 @@ export default function AuthModal({ onClose, reason }: AuthModalProps) {
   const handleVerify = async () => {
     setError('');
     if (!otp.trim()) return setError('Enter the OTP from your email');
-    if (stage === 'otp-new' && !anonName.trim()) return setError('Choose an anonymous username');
     setIsLoading(true);
     try {
-      const res = await verifyOtp(email, otp, stage === 'otp-new' ? anonName : undefined);
+      const res = await verifyOtp(email, otp);
       if (!res.success || !res.token) return setError(res.message || 'Login failed, please try again.');
+      
+      if (res.needsAnonName) {
+        setStage('choose-name');
+        return;
+      }
+      
       login(res.token);
       onClose();
     } catch (err: any) { 
       console.error(err);
       setError(err?.message || 'Network error. Please try again.'); 
+    }
+    finally { setIsLoading(false); }
+  };
+
+  const handleSetName = async () => {
+    setError('');
+    if (!anonName.trim()) return setError('Choose an anonymous username');
+    setIsLoading(true);
+    try {
+      const res = await setAnonName(anonName);
+      if (!res.success || !res.token) return setError(res.message || 'Failed to set anonymous name');
+      login(res.token);
+      onClose();
+    } catch (err: any) {
+      console.error(err);
+      setError(err?.message || 'Network error. Please try again.');
     }
     finally { setIsLoading(false); }
   };
@@ -251,117 +271,8 @@ export default function AuthModal({ onClose, reason }: AuthModalProps) {
                 </motion.div>
               )}
 
-              {/* ── Stage: OTP New User ── */}
-              {stage === 'otp-new' && (
-                <motion.div
-                  key="otp-new-stage"
-                  initial={{ opacity: 0, x: 30 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  exit={{ opacity: 0, x: -30 }}
-                  transition={{ duration: 0.25 }}
-                  className="space-y-5"
-                >
-                  <div>
-                    <h2 style={{ fontSize: '22px', fontWeight: 900, color: 'white', lineHeight: 1.2 }}>
-                      Create your identity ✨
-                    </h2>
-                    <p style={{ color: 'rgba(255,255,255,0.45)', fontSize: '12px', marginTop: '6px' }}>
-                      OTP sent to <span style={{ color: '#93c5fd' }}>{email}</span>
-                    </p>
-                  </div>
-
-                  <div>
-                    <label style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '11px', fontWeight: 700, color: '#FFD740', marginBottom: '8px' }}>
-                      <User className="w-3 h-3" /> Choose Anonymous Username
-                    </label>
-                    <div style={{ display: 'flex', gap: '8px' }}>
-                      <input
-                        type="text"
-                        value={anonName}
-                        onChange={e => setAnonName(e.target.value)}
-                        placeholder="e.g. StormWatcher42"
-                        maxLength={20}
-                        autoFocus
-                        style={{
-                          flex: 1, padding: '13px 16px', borderRadius: '14px',
-                          background: 'rgba(255,255,255,0.05)', color: 'white', fontSize: '14px',
-                          border: '1.5px solid rgba(255,215,64,0.25)', outline: 'none',
-                        }}
-                        onFocus={e => e.target.style.borderColor = 'rgba(255,215,64,0.6)'}
-                        onBlur={e => e.target.style.borderColor = 'rgba(255,215,64,0.25)'}
-                      />
-                      <motion.button
-                        onClick={randomName}
-                        whileHover={{ scale: 1.1, rotate: 180 }}
-                        whileTap={{ scale: 0.9 }}
-                        transition={{ duration: 0.3 }}
-                        style={{
-                          padding: '13px', borderRadius: '14px',
-                          background: 'rgba(255,215,64,0.1)', color: 'rgba(255,215,64,0.7)',
-                          border: '1px solid rgba(255,215,64,0.2)', cursor: 'pointer'
-                        }}
-                        title="Random name"
-                      >
-                        <Shuffle className="w-4 h-4" />
-                      </motion.button>
-                    </div>
-                    <p style={{ color: 'rgba(255,255,255,0.25)', fontSize: '10px', marginTop: '6px' }}>
-                      Your anonymous identity on MITVoice. 3–20 chars.
-                    </p>
-                  </div>
-
-                  <div>
-                    <label style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '11px', fontWeight: 700, color: 'rgba(255,255,255,0.45)', marginBottom: '8px' }}>
-                      <KeyRound className="w-3 h-3" /> OTP (check your MIT email)
-                    </label>
-                    <input
-                      type="text"
-                      value={otp}
-                      onChange={e => setOtp(e.target.value.replace(/\D/g, '').slice(0, 6))}
-                      onKeyDown={e => e.key === 'Enter' && handleVerify()}
-                      placeholder="• • • • • •"
-                      inputMode="numeric"
-                      maxLength={6}
-                      style={{
-                        width: '100%', padding: '13px 16px', borderRadius: '14px',
-                        background: 'rgba(255,255,255,0.05)', color: 'white', fontSize: '22px',
-                        border: '1.5px solid rgba(255,255,255,0.1)', outline: 'none',
-                        textAlign: 'center', fontWeight: 900, letterSpacing: '0.4em',
-                      }}
-                      onFocus={e => e.target.style.borderColor = 'rgba(74,222,128,0.6)'}
-                      onBlur={e => e.target.style.borderColor = 'rgba(255,255,255,0.1)'}
-                    />
-                  </div>
-
-                  {error && (
-                    <motion.p key={error} initial={{ opacity: 0, y: -6 }} animate={{ opacity: 1, y: 0 }}
-                      style={{ color: '#f87171', fontSize: '12px', fontWeight: 700 }}>{error}</motion.p>
-                  )}
-
-                  <motion.button
-                    onClick={handleVerify} disabled={isLoading}
-                    whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.97 }}
-                    style={{
-                      width: '100%', padding: '14px', borderRadius: '14px',
-                      fontWeight: 900, fontSize: '14px', color: '#000',
-                      background: 'linear-gradient(135deg, #FFD740, #FFA000)',
-                      border: 'none', cursor: 'pointer', opacity: isLoading ? 0.6 : 1,
-                      display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px',
-                      boxShadow: '0 4px 20px rgba(255,215,64,0.3)',
-                    }}
-                  >
-                    {isLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Join Mithya 🚀'}
-                  </motion.button>
-
-                  <button onClick={() => setStage('email')}
-                    style={{ width: '100%', color: 'rgba(255,255,255,0.3)', fontSize: '12px', background: 'none', border: 'none', cursor: 'pointer' }}>
-                    ← Back to email
-                  </button>
-                </motion.div>
-              )}
-
-              {/* ── Stage: OTP Returning User ── */}
-              {stage === 'otp-returning' && (
+              {/* ── Stage: OTP ── */}
+              {stage === 'otp' && (
                 <motion.div
                   key="otp-returning-stage"
                   initial={{ opacity: 0, x: 30 }}
@@ -372,7 +283,7 @@ export default function AuthModal({ onClose, reason }: AuthModalProps) {
                 >
                   <div>
                     <h2 style={{ fontSize: '22px', fontWeight: 900, color: 'white', lineHeight: 1.2 }}>
-                      Welcome back! 👾
+                      Verify its you 👾
                     </h2>
                     <p style={{ color: 'rgba(255,255,255,0.45)', fontSize: '12px', marginTop: '6px' }}>
                       OTP sent to <span style={{ color: '#93c5fd' }}>{email}</span>
@@ -427,6 +338,88 @@ export default function AuthModal({ onClose, reason }: AuthModalProps) {
                     style={{ width: '100%', color: 'rgba(255,255,255,0.3)', fontSize: '12px', background: 'none', border: 'none', cursor: 'pointer' }}>
                     ← Back to email
                   </button>
+                </motion.div>
+              )}
+
+              {/* ── Stage: Choose Name ── */}
+              {stage === 'choose-name' && (
+                <motion.div
+                  key="choose-name-stage"
+                  initial={{ opacity: 0, x: 30 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  exit={{ opacity: 0, x: -30 }}
+                  transition={{ duration: 0.25 }}
+                  className="space-y-5"
+                >
+                  <div>
+                    <h2 style={{ fontSize: '22px', fontWeight: 900, color: 'white', lineHeight: 1.2 }}>
+                      Create your identity ✨
+                    </h2>
+                    <p style={{ color: 'rgba(255,255,255,0.45)', fontSize: '12px', marginTop: '6px' }}>
+                      Pick an anonymous alias for MITVoice.
+                    </p>
+                  </div>
+
+                  <div>
+                    <label style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '11px', fontWeight: 700, color: '#FFD740', marginBottom: '8px' }}>
+                      <User className="w-3 h-3" /> Choose Anonymous Username
+                    </label>
+                    <div style={{ display: 'flex', gap: '8px' }}>
+                      <input
+                        type="text"
+                        value={anonName}
+                        onChange={e => setAnonName(e.target.value)}
+                        onKeyDown={e => e.key === 'Enter' && handleSetName()}
+                        placeholder="e.g. StormWatcher42"
+                        maxLength={20}
+                        autoFocus
+                        style={{
+                          flex: 1, padding: '13px 16px', borderRadius: '14px',
+                          background: 'rgba(255,255,255,0.05)', color: 'white', fontSize: '14px',
+                          border: '1.5px solid rgba(255,215,64,0.25)', outline: 'none',
+                        }}
+                        onFocus={e => e.target.style.borderColor = 'rgba(255,215,64,0.6)'}
+                        onBlur={e => e.target.style.borderColor = 'rgba(255,215,64,0.25)'}
+                      />
+                      <motion.button
+                        onClick={randomName}
+                        whileHover={{ scale: 1.1, rotate: 180 }}
+                        whileTap={{ scale: 0.9 }}
+                        transition={{ duration: 0.3 }}
+                        style={{
+                          padding: '13px', borderRadius: '14px',
+                          background: 'rgba(255,215,64,0.1)', color: 'rgba(255,215,64,0.7)',
+                          border: '1px solid rgba(255,215,64,0.2)', cursor: 'pointer'
+                        }}
+                        title="Random name"
+                      >
+                        <Shuffle className="w-4 h-4" />
+                      </motion.button>
+                    </div>
+                    <p style={{ color: 'rgba(255,255,255,0.25)', fontSize: '10px', marginTop: '6px' }}>
+                      Your anonymous identity on MITVoice. 3–20 chars.
+                    </p>
+                  </div>
+
+                  {error && (
+                    <motion.p key={error} initial={{ opacity: 0, y: -6 }} animate={{ opacity: 1, y: 0 }}
+                      style={{ color: '#f87171', fontSize: '12px', fontWeight: 700 }}>{error}</motion.p>
+                  )}
+
+                  <motion.button
+                    onClick={handleSetName} disabled={isLoading}
+                    whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.97 }}
+                    style={{
+                      width: '100%', padding: '14px', borderRadius: '14px',
+                      fontWeight: 900, fontSize: '14px', color: '#000',
+                      background: 'linear-gradient(135deg, #FFD740, #FFA000)',
+                      border: 'none', cursor: 'pointer', opacity: isLoading ? 0.6 : 1,
+                      display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px',
+                      boxShadow: '0 4px 20px rgba(255,215,64,0.3)',
+                    }}
+                  >
+                    {isLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Join Mithya 🚀'}
+                  </motion.button>
                 </motion.div>
               )}
             </AnimatePresence>
