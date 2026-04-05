@@ -63,7 +63,7 @@ export interface EventItem {
 export type EventTag =
   | 'Hackathon'
   | 'Ideathon'
-  | 'Club Drive'
+  | 'Club_Drive'
   | 'Volunteering'
   | 'Workshop'
   | 'Competition'

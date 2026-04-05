@@ -7,6 +7,25 @@ import type { LostItem } from '../types';
 import { useAuth } from '../context/AuthContext';
 import AuthModal from '../components/AuthModal';
 
+const SkeletonLFItem = () => (
+  <div className="glass-card flex flex-col overflow-hidden border border-white/10 animate-pulse bg-white/5">
+    <div className="w-full h-40 bg-white/10"></div>
+    <div className="p-4 space-y-3 flex-1 flex flex-col">
+      <div className="w-3/4 h-5 bg-white/10 rounded"></div>
+      <div className="w-16 h-4 bg-white/10 rounded mb-2"></div>
+      <div className="w-full h-3 bg-white/10 rounded"></div>
+      <div className="w-5/6 h-3 bg-white/10 rounded"></div>
+      <div className="pt-3 border-t border-white/10 flex justify-between mt-auto">
+        <div className="w-24 h-4 bg-white/10 rounded mt-1"></div>
+        <div className="flex gap-2">
+          <div className="w-16 h-8 bg-white/10 rounded flex-shrink-0"></div>
+          <div className="w-16 h-8 bg-white/10 rounded flex-shrink-0"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+);
+
 export default function LostFound() {
   const { user, token } = useAuth();
   const [showAuth, setShowAuth] = useState(false);
@@ -158,14 +177,16 @@ export default function LostFound() {
               <p className="text-white/60 text-xs mt-0.5">Help reuniting stuff with students.</p>
             </div>
           </div>
-          <button
+          <motion.button
+            whileHover={{ scale: 1.05 }}
+            whileTap={{ scale: 0.95 }}
             onClick={() => { if (!user) { setShowAuth(true); } else { setIsModalOpen(true); } }}
-            className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-bold text-white transition-transform hover:scale-105 active:scale-95"
+            className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-bold text-white transition-colors"
             style={{ background: 'linear-gradient(135deg, #FFD740, #F9A825)', color: '#1a1a2e' }}
           >
             <Plus className="w-5 h-5" />
             <span className="hidden sm:inline">Report Item</span>
-          </button>
+          </motion.button>
         </div>
 
         {/* Search & Filter */}
@@ -196,9 +217,11 @@ export default function LostFound() {
       </div>
 
       {isLoadingFeed ? (
-        <div className="text-center py-12">
-          <Loader2 className="w-10 h-10 text-doraSky animate-spin mx-auto mb-3" />
-          <p className="text-white/60 font-semibold">Loading items...</p>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <SkeletonLFItem />
+          <SkeletonLFItem />
+          <SkeletonLFItem />
+          <SkeletonLFItem />
         </div>
       ) : (
         <>

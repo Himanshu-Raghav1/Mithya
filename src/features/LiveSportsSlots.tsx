@@ -28,6 +28,23 @@ function groupAndSort(slots: SlotResult[]): Record<string, SlotResult[]> {
   return groups;
 }
 
+const SkeletonSlotGroup = () => (
+  <div className="glass-card overflow-hidden animate-pulse mb-4" style={{ background: 'rgba(255,255,255,0.04)' }}>
+    <div className="px-4 py-3 flex items-center gap-2" style={{ background: 'rgba(0,168,232,0.1)' }}>
+      <div className="w-6 h-6 rounded bg-white/10" />
+      <div className="w-32 h-4 rounded bg-white/10" />
+    </div>
+    <div className="divide-y divide-white/5">
+      {[1, 2].map(i => (
+        <div key={i} className="px-4 py-4 flex items-center justify-between">
+          <div className="w-24 h-4 rounded bg-white/10" />
+          <div className="w-20 h-5 rounded-full bg-white/10" />
+        </div>
+      ))}
+    </div>
+  </div>
+);
+
 export default function LiveSportsSlots() {
   const [query, setQuery] = useState('');
   const [loading, setLoading] = useState(false);
@@ -113,9 +130,9 @@ export default function LiveSportsSlots() {
 
       {/* Loading */}
       {loading && (
-        <div className="text-center py-12">
-          <Loader2 className="w-10 h-10 text-blue-300 animate-spin mx-auto mb-3" />
-          <p className="text-white/60 font-semibold">Fetching live slots from server...</p>
+        <div className="mt-4 space-y-4">
+          <SkeletonSlotGroup />
+          <SkeletonSlotGroup />
         </div>
       )}
 
@@ -133,16 +150,18 @@ export default function LiveSportsSlots() {
             You might still find slots directly on the official portal.
           </p>
           
-          <a
+          <motion.a
+            whileHover={{ scale: 1.05 }}
+            whileTap={{ scale: 0.95 }}
             href="https://sports.mitwpu.edu.in/login"
             target="_blank"
             rel="noopener noreferrer"
-            className="inline-flex items-center justify-center gap-2 px-6 py-3 rounded-xl font-black text-white transition-all hover:scale-105 active:scale-95 shadow-lg shadow-white/5"
+            className="inline-flex items-center justify-center gap-2 px-6 py-3 rounded-xl font-black text-white shadow-lg shadow-white/5"
             style={{ background: 'linear-gradient(135deg, #FF6B6B, #E53935)' }}
           >
             <span>Check Official Website</span>
             <ExternalLink className="w-5 h-5" />
-          </a>
+          </motion.a>
         </motion.div>
       )}
 
@@ -166,16 +185,18 @@ export default function LiveSportsSlots() {
               )}
             </div>
             
-            <a 
+            <motion.a 
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
               href="https://sports.mitwpu.edu.in/login" 
               target="_blank" 
               rel="noopener noreferrer"
-              className="flex items-center justify-center gap-2 px-4 py-2 rounded-xl text-sm font-bold text-white transition-transform hover:scale-105 active:scale-95 flex-shrink-0"
+              className="flex items-center justify-center gap-2 px-4 py-2 rounded-xl text-sm font-bold text-white flex-shrink-0"
               style={{ background: 'linear-gradient(135deg, #FF6B6B, #E53935)' }}
             >
               <span>Book Slot Now</span>
               <ExternalLink className="w-4 h-4" />
-            </a>
+            </motion.a>
           </div>
 
           {/* Grouped by table name */}

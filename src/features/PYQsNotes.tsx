@@ -40,6 +40,26 @@ const PROGRAMS: ProgramType[] = ['BTech', 'BCA', 'BBA', 'BA', 'B.com', 'BSc', 'B
 const SEMESTERS = ['1', '2', '3', '4', '5', '6', '7', '8'];
 const CATEGORIES = ['PYQs', 'Notes', 'PPT or PDF'];
 
+const SkeletonPYQItem = () => (
+  <div className="glass-card p-5 border border-white/10 animate-pulse bg-white/5">
+    <div className="flex justify-between items-start mb-3 gap-2">
+      <div className="flex flex-col gap-1 w-full">
+        <div className="w-20 h-5 bg-white/10 rounded-full"></div>
+        <div className="flex gap-1.5 mt-1">
+          <div className="w-12 h-4 bg-white/10 rounded"></div>
+          <div className="w-12 h-4 bg-white/10 rounded"></div>
+        </div>
+      </div>
+      <div className="w-16 h-3 bg-white/10 rounded"></div>
+    </div>
+    <div className="w-3/4 h-5 bg-white/10 rounded mb-4 mt-2"></div>
+    <div className="flex items-center justify-between mt-6">
+      <div className="w-24 h-3 bg-white/10 rounded"></div>
+      <div className="w-8 h-8 bg-white/10 rounded-lg"></div>
+    </div>
+  </div>
+);
+
 export default function PYQsNotes() {
   const { user } = useAuth();
   const [showAuth, setShowAuth] = useState(false);
@@ -284,9 +304,11 @@ export default function PYQsNotes() {
 
           {/* Results */}
           {isLoading ? (
-            <div className="text-center py-12">
-              <Loader2 className="w-10 h-10 text-yellow-500 animate-spin mx-auto mb-3" />
-              <p className="text-white/50 text-sm">Loading notes...</p>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <SkeletonPYQItem />
+              <SkeletonPYQItem />
+              <SkeletonPYQItem />
+              <SkeletonPYQItem />
             </div>
           ) : notes.length === 0 ? (
             <div className="text-center py-16 opacity-50">

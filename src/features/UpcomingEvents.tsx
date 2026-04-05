@@ -38,21 +38,21 @@ function ShinchanMini() {
 }
 
 const TAG_COLORS: Record<EventTag, { bg: string; text: string; border: string }> = {
-  Hackathon:   { bg: 'rgba(0,168,232,0.2)',  text: '#4FC3F7', border: 'rgba(0,168,232,0.4)' },
-  Ideathon:    { bg: 'rgba(156,39,176,0.2)', text: '#CE93D8', border: 'rgba(156,39,176,0.4)' },
-  'Club Drive':{ bg: 'rgba(255,152,0,0.2)',  text: '#FFCC02', border: 'rgba(255,152,0,0.4)' },
-  Volunteering:{ bg: 'rgba(76,175,80,0.2)',  text: '#81C784', border: 'rgba(76,175,80,0.4)' },
-  Workshop:    { bg: 'rgba(233,30,99,0.2)',  text: '#F48FB1', border: 'rgba(233,30,99,0.4)' },
-  Competition: { bg: 'rgba(229,57,53,0.2)',  text: '#EF9A9A', border: 'rgba(229,57,53,0.4)' },
-  Recruitment: { bg: 'rgba(0,150,136,0.2)',  text: '#80CBC4', border: 'rgba(0,150,136,0.4)' },
-  Concert:     { bg: 'rgba(255,193,7,0.2)',  text: '#FFE082', border: 'rgba(255,193,7,0.4)' },
+  Hackathon: { bg: 'rgba(0,168,232,0.2)', text: '#4FC3F7', border: 'rgba(0,168,232,0.4)' },
+  Ideathon: { bg: 'rgba(156,39,176,0.2)', text: '#CE93D8', border: 'rgba(156,39,176,0.4)' },
+  Club Drive: { bg: 'rgba(255,152,0,0.2)', text: '#FFCC02', border: 'rgba(255,152,0,0.4)' },
+  Volunteering: { bg: 'rgba(76,175,80,0.2)', text: '#81C784', border: 'rgba(76,175,80,0.4)' },
+  Workshop: { bg: 'rgba(233,30,99,0.2)', text: '#F48FB1', border: 'rgba(233,30,99,0.4)' },
+  Competition: { bg: 'rgba(229,57,53,0.2)', text: '#EF9A9A', border: 'rgba(229,57,53,0.4)' },
+  Recruitment: { bg: 'rgba(0,150,136,0.2)', text: '#80CBC4', border: 'rgba(0,150,136,0.4)' },
+  Concert: { bg: 'rgba(255,193,7,0.2)', text: '#FFE082', border: 'rgba(255,193,7,0.4)' },
 };
 
 export default function UpcomingEvents() {
   const [events, setEvents] = useState<EventItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isModalOpen, setIsModalOpen] = useState(false);
-  
+
   // Form State
   const [title, setTitle] = useState('');
   const [date, setDate] = useState('');
@@ -146,7 +146,7 @@ export default function UpcomingEvents() {
             </p>
           </div>
         </div>
-        <button 
+        <button
           onClick={() => setIsModalOpen(true)}
           className="flex-shrink-0 ml-2 sm:ml-4 px-3 py-2 rounded-xl text-xs font-bold text-white transition-transform hover:scale-105 active:scale-95 bg-white/10 hover:bg-white/20 border border-white/20"
         >
@@ -169,8 +169,8 @@ export default function UpcomingEvents() {
       ) : (
         <div className="grid grid-cols-1 gap-4">
           {events.map((event, i) => {
-            const tag = Object.keys(TAG_COLORS).includes(event.tag) 
-              ? TAG_COLORS[event.tag as EventTag] 
+            const tag = Object.keys(TAG_COLORS).includes(event.tag)
+              ? TAG_COLORS[event.tag as EventTag]
               : TAG_COLORS['Workshop'];
 
             return (
@@ -189,7 +189,7 @@ export default function UpcomingEvents() {
                   </div>
                 ) : (
                   <div className="w-full sm:w-24 h-24 sm:h-auto bg-white/5 flex items-center justify-center border-b sm:border-b-0 sm:border-r border-white/10">
-                     <span className="text-4xl opacity-50">{event.icon}</span>
+                    <span className="text-4xl opacity-50">{event.icon}</span>
                   </div>
                 )}
 
@@ -197,7 +197,7 @@ export default function UpcomingEvents() {
                 <div className="p-4 flex-1 flex flex-col justify-between">
                   <div>
                     <div className="flex items-start justify-between gap-2 mb-2">
-                       <h3 className="text-white font-black text-lg leading-snug">
+                      <h3 className="text-white font-black text-lg leading-snug">
                         {event.title}
                       </h3>
                       <span
@@ -207,12 +207,12 @@ export default function UpcomingEvents() {
                         {event.tag}
                       </span>
                     </div>
-                    
+
                     <p className="text-red-300 text-sm font-bold flex items-center gap-2 mb-3">
                       <Calendar className="w-4 h-4" />
                       {event.date}
                     </p>
-                    
+
                     {event.description && (
                       <p className="text-white/70 text-sm leading-relaxed mb-4">
                         {event.description}
@@ -225,11 +225,11 @@ export default function UpcomingEvents() {
                     <span className="text-white/40 text-xs text-left">
                       By: <span className="text-white/70 font-bold">{event.organizer}</span>
                     </span>
-                    
+
                     {event.url && (
-                      <a 
-                        href={event.url} 
-                        target="_blank" 
+                      <a
+                        href={event.url}
+                        target="_blank"
                         rel="noreferrer"
                         className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold bg-white/10 hover:bg-white/20 text-white transition-colors"
                       >
@@ -267,7 +267,7 @@ export default function UpcomingEvents() {
                 {/* Poster Upload */}
                 <div>
                   <label className="text-xs font-bold text-white/60 ml-1 block mb-1">Event Poster (Optional)</label>
-                  <div 
+                  <div
                     onClick={() => fileInputRef.current?.click()}
                     className="relative rounded-xl border-2 border-dashed border-white/20 bg-white/5 overflow-hidden group hover:border-doraSky transition-colors flex items-center justify-center cursor-pointer min-h-[120px]"
                   >
@@ -281,7 +281,7 @@ export default function UpcomingEvents() {
                       </div>
                     )}
                     <input type="file" ref={fileInputRef} onChange={handleImageChange} accept="image/*" className="hidden" />
-                    
+
                     {previewUrl && (
                       <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity">
                         <span className="text-white font-bold text-sm bg-black/60 px-3 py-1 rounded-lg backdrop-blur-md">Change Poster</span>
@@ -320,7 +320,7 @@ export default function UpcomingEvents() {
                   </div>
                 </div>
 
-                <button 
+                <button
                   type="submit" disabled={isUploading}
                   className="w-full py-3.5 mt-2 rounded-xl font-black text-[15px] flex items-center justify-center gap-2 transition-transform hover:scale-[1.02] active:scale-95 disabled:opacity-50"
                   style={{ background: 'linear-gradient(135deg, #00A8E8, #0077B6)', color: 'white' }}
