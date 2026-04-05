@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { MapPin, X } from 'lucide-react';
 
 import { getPinboard } from '../services/api';
 import type { PinItem } from '../types';
@@ -40,7 +41,7 @@ export default function PinBoard() {
       {/* Header */}
       <div className="glass-card p-5 border border-white/10 flex items-center gap-4" style={{ background: 'rgba(255,255,255,0.03)' }}>
         <div className="w-12 h-12 rounded-2xl flex items-center justify-center flex-shrink-0" style={{ background: 'linear-gradient(135deg, #FF6B6B, #E53935)' }}>
-          <Pin className="w-6 h-6 text-white" />
+          <MapPin className="w-6 h-6 text-white" />
         </div>
         <div>
           <h2 className="text-xl sm:text-2xl font-black text-white">Campus PIN Board</h2>
@@ -57,7 +58,7 @@ export default function PinBoard() {
         </div>
       ) : pins.length === 0 ? (
         <div className="text-center py-20 opacity-50">
-          <Pin className="w-12 h-12 mx-auto mb-3 text-white/40" />
+          <MapPin className="w-12 h-12 mx-auto mb-3 text-white/40" />
           <p className="text-white font-semibold">The pin board is currently empty.</p>
           <p className="text-white/40 text-xs mt-1">Check back later for new photos!</p>
         </div>

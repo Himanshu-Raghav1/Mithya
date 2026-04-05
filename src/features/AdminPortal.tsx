@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { 
   ShieldCheck, LogOut, CheckCircle2, XCircle, Trash2, Plus, 
   Loader2, Link as LinkIcon, GlobeLock, Book, MessageSquare, 
-  Phone, Calendar, Pin, Upload 
+  Phone, Calendar, MapPin, Upload 
 } from 'lucide-react';
 import { 
   verifyAdmin, getPendingPyqs, moderatePyq, 
@@ -252,7 +252,7 @@ export default function AdminPortal() {
           <Calendar className="w-4 h-4" /> Events
         </button>
         <button onClick={() => setActiveTab('pinboard')} className={`flex items-center gap-2 px-4 py-2.5 rounded-xl font-bold transition-colors flex-shrink-0 ${activeTab === 'pinboard' ? 'bg-blue-500 text-white' : 'bg-white/5 text-white/60 hover:text-white hover:bg-white/10'}`}>
-          <Pin className="w-4 h-4" /> Pin Board
+          <MapPin className="w-4 h-4" /> Pin Board
         </button>
       </div>
 
@@ -388,7 +388,7 @@ export default function AdminPortal() {
                  </div>
                  <input value={pinCaption} onChange={e=>setPinCaption(e.target.value)} type="text" placeholder="Caption (optional)" className="w-full bg-black/30 border border-white/10 rounded-lg px-3 py-2 text-sm text-white outline-none focus:border-yellow-400" />
                  <button type="submit" disabled={isUploadingPin} className="bg-yellow-500 text-black font-bold px-4 py-2 rounded-lg hover:bg-yellow-400 transition-colors flex items-center gap-2 disabled:opacity-50">
-                    {isUploadingPin ? <><Loader2 className="w-4 h-4 animate-spin"/> Uploading...</> : <><Pin className="w-4 h-4"/> Pin to Board</>}
+                    {isUploadingPin ? <><Loader2 className="w-4 h-4 animate-spin"/> Uploading...</> : <><MapPin className="w-4 h-4"/> Pin to Board</>}
                  </button>
                </form>
              </div>

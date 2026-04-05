@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Send, ThumbsUp, ThumbsDown, MessageCircle, Flag, ChevronDown, Loader2, Image as ImageIcon, X, Plus } from 'lucide-react';
+import { Send, ThumbsUp, ThumbsDown, MessageCircle, Flag, Loader2, Image as ImageIcon, X, Plus } from 'lucide-react';
 import type { ForumPost, Comment } from '../types';
 import { getForumPosts, createForumPost, addComment, interactWithPost } from '../services/api';
 import { uploadToCloudinary } from '../services/cloudinary';
