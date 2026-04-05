@@ -106,7 +106,8 @@ export type TabId =
   | 'pyqs'
   | 'admin'
   | 'personalized'
-  | 'pinboard';
+  | 'pinboard'
+  | 'qrgen';
 
 /** A PYQ / Note submission */
 export interface PyqNote {

@@ -18,6 +18,7 @@ const tabs: { id: TabId; label: string; emoji: string }[] = [
   { id: 'personalized', label: 'Private Space', emoji: '🔐' },
   { id: 'events', label: 'Concerts & Events', emoji: '🎵' },
   { id: 'pinboard', label: 'Pin Board', emoji: '📌' },
+  { id: 'qrgen', label: 'QR Forge', emoji: '🔳' },
   { id: 'contacts', label: 'Contacts', emoji: '📞' },
   { id: 'quicklinks', label: 'Quick Links', emoji: '🔗' },
   { id: 'admin', label: 'Admin Portal', emoji: '🔒' }

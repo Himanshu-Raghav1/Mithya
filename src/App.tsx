@@ -14,6 +14,7 @@ import PYQsNotes from './features/PYQsNotes';
 import AdminPortal from './features/AdminPortal';
 import PersonalizedSpace from './features/PersonalizedSpace';
 import PinBoard from './features/PinBoard';
+import QRGenerator from './features/QRGenerator';
 
 import type { TabId } from './types';
 
@@ -34,6 +35,7 @@ export default function App() {
       case 'pyqs':     return <PYQsNotes />;
       case 'personalized': return <PersonalizedSpace />;
       case 'pinboard': return <PinBoard />;
+      case 'qrgen':    return <QRGenerator />;
       case 'admin':    return <AdminPortal />;
     }
   };
