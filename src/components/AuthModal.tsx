@@ -1,9 +1,9 @@
-import { useState, useRef, useEffect } from 'react';
+import { useState } from 'react';
 import { createPortal } from 'react-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, Mail, KeyRound, User, Loader2, Shuffle } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
-import { sendOtp, verifyOtp, setAnonName } from '../services/authApi';
+import { sendOtp, verifyOtp, setAnonName as apiSetAnonName } from '../services/authApi';
 
 const FUN_NAMES = [
   'StormWatcher', 'CafePhilosopher', 'MysticOwl', 'TechNinja',
@@ -86,7 +86,7 @@ export default function AuthModal({ onClose, reason }: AuthModalProps) {
     if (!anonName.trim()) return setError('Choose an anonymous username');
     setIsLoading(true);
     try {
-      const res = await setAnonName(anonName);
+      const res = await apiSetAnonName(anonName);
       if (!res.success || !res.token) return setError(res.message || 'Failed to set anonymous name');
       login(res.token);
       onClose();
