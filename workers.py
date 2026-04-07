@@ -173,18 +173,37 @@ def scrape_and_update_db(token):
                     if slot_date != today_date:
                         continue  # This slot is not for today! Skip it entirely.
                         
+               # 🛑 FIX 3: THE TIMEZONE AND DATE CHECK
                 try:
                     if 'T' in start_time_str:
-                        time_part = start_time_str.split('T')[1].split('+')[0].split('Z')[0]
-                        slot_start_time = datetime.strptime(time_part[:8], "%H:%M:%S").time()
+                        # 1. Extract the raw date and time from the UTC string
+                        date_part = start_time_str.split('T')[0]
+                        time_part = start_time_str.split('T')[1].split('+')[0].split('Z')[0][:8]
+                        
+                        # 2. Tell Python this is official UTC time
+                        dt_utc = datetime.strptime(f"{date_part} {time_part}", "%Y-%m-%d %H:%M:%S")
+                        dt_utc = dt_utc.replace(tzinfo=timezone.utc)
+                        
+                        # 3. Convert it directly to Indian Standard Time (IST)
+                        dt_ist = dt_utc.astimezone(IST)
+                        
+                        # 4. Extract the correct local time
+                        slot_start_time = dt_ist.time()
+                        
+                        # 5. Skip if this slot is actually for tomorrow in IST!
+                        if dt_ist.strftime("%Y-%m-%d") != today_date:
+                            continue  
+                            
                     else:
+                        # Fallback just in case they revert to the old format
                         clean_time = start_time_str.split('+')[0].strip()
                         if len(clean_time) >= 8:
                             slot_start_time = datetime.strptime(clean_time[:8], "%H:%M:%S").time()
                         else:
                             slot_start_time = datetime.strptime(clean_time[:5], "%H:%M").time()
                 except Exception as e:
-                    continue 
+                    print(f"Time parse error: {e}")
+                    continue
 
                 # Skip slots that have ALREADY started real-time today
                 if slot_start_time < current_time:
