@@ -21,7 +21,7 @@ CORS(app,
 MONGO_URI = os.environ.get("MONGO_URI", "")
 if not MONGO_URI:
     raise RuntimeError("MONGO_URI environment variable is not set!")
-client = MongoClient(MONGO_URI)
+client = MongoClient(MONGO_URI, maxPoolSize=50, waitQueueTimeoutMS=2500, serverSelectionTimeoutMS=10000, connectTimeoutMS=10000)
 db = client['mithya_sports']
 slots_collection = db['available_slots']
 voice_collection = db['mithya_voice']
@@ -32,6 +32,15 @@ pinboard_collection = db['mithya_pinboard']
 contacts_collection = db['important_contacts']
 users_collection    = db['mithya_users']
 app_stats_collection = db['app_stats']
+
+# Performance Indices (Resolves query slowdowns globally)
+voice_collection.create_index([("timestamp", -1)])
+lost_found_collection.create_index([("timestamp", -1)])
+events_collection.create_index([("date", 1)])
+pyqs_collection.create_index([("timestamp", -1)])
+pinboard_collection.create_index([("timestamp", -1)])
+private_deadlines_collection = db['private_deadlines']
+private_deadlines_collection.create_index([("date", 1)])
 
 # Personalized Space Collections
 user_storage_collection = db['user_storage']
