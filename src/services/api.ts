@@ -151,6 +151,27 @@ export async function createLostFoundItem(payload: any, token: string): Promise<
   }
 }
 
+export async function getLostFoundStats(): Promise<ApiResponse<{ solved_cases: number }>> {
+  try {
+    const res = await fetch(`${API_BASE_URL}/api/lostfound/stats`);
+    return await res.json() as ApiResponse<{ solved_cases: number }>;
+  } catch {
+    return { success: false, message: 'Failed to fetch stats' };
+  }
+}
+
+export async function resolveLostFoundItem(itemId: string, token: string): Promise<ApiResponse<any>> {
+  try {
+    const res = await fetch(`${API_BASE_URL}/api/lostfound/${itemId}/solve`, {
+      method: 'DELETE',
+      headers: { 'Authorization': `Bearer ${token}` }
+    });
+    return await res.json();
+  } catch {
+    return { success: false, message: 'Failed to resolve item' };
+  }
+}
+
 // ==========================================
 // 🎟️ EVENTS (MONGODB API)
 // ==========================================

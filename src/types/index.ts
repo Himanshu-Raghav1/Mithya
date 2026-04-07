@@ -132,6 +132,7 @@ export interface LostItem {
   type: 'Lost' | 'Found';
   image_url?: string;
   timestamp: string;
+  auth_uid?: string;
 }
 
 /** A Pin Board item */

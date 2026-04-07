@@ -1,8 +1,8 @@
 import { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Search, Loader2, Upload, X, MessageCircle, AlertCircle, Plus, Image as ImageIcon, Share2 } from 'lucide-react';
+import { Search, Loader2, Upload, X, MessageCircle, AlertCircle, Plus, Image as ImageIcon, Share2, CheckCircle2 } from 'lucide-react';
 import { uploadToCloudinary } from '../services/cloudinary';
-import { getLostFoundItems, createLostFoundItem } from '../services/api';
+import { getLostFoundItems, createLostFoundItem, getLostFoundStats, resolveLostFoundItem } from '../services/api';
 import type { LostItem } from '../types';
 import { useAuth } from '../context/AuthContext';
 import AuthModal from '../components/AuthModal';
@@ -33,6 +33,7 @@ export default function LostFound() {
   const [isLoadingFeed, setIsLoadingFeed] = useState(true);
   const [filter, setFilter] = useState<'All' | 'Lost' | 'Found'>('All');
   const [searchQuery, setSearchQuery] = useState('');
+  const [solvedCount, setSolvedCount] = useState(0);
 
   // Modal State
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -50,9 +51,15 @@ export default function LostFound() {
 
   useEffect(() => {
     async function loadItems() {
-      const res = await getLostFoundItems();
+      const [res, statsRes] = await Promise.all([
+        getLostFoundItems(),
+        getLostFoundStats()
+      ]);
       if (res.success && res.data) {
         setItems(res.data);
+      }
+      if (statsRes.success && statsRes.data) {
+        setSolvedCount(statsRes.data.solved_cases);
       }
       setIsLoadingFeed(false);
     }
@@ -164,6 +171,20 @@ export default function LostFound() {
       item.description.toLowerCase().includes(searchQuery.toLowerCase())
     );
 
+  const handleResolveItem = async (itemId: string) => {
+    if (!token) return;
+    const confirmDelete = window.confirm("Mark this item as solved? This will delete the post entirely.");
+    if (!confirmDelete) return;
+
+    const res = await resolveLostFoundItem(itemId, token);
+    if (!res.success) {
+      alert("Failed to mark as solved: " + res.message);
+      return;
+    }
+    setItems(items.filter(i => i.id !== itemId));
+    setSolvedCount(prev => prev + 1);
+  };
+
   return (
     <div className="p-4 max-w-2xl mx-auto space-y-6 pb-24">
       {showAuth && <AuthModal onClose={() => setShowAuth(false)} reason="to report a Lost or Found item" />}
@@ -173,7 +194,12 @@ export default function LostFound() {
           <div className="flex items-center gap-3">
             <span className="text-3xl">🧳</span>
             <div>
-              <h2 className="text-xl font-black text-white">Lost & Found</h2>
+              <div className="flex items-center gap-3">
+                <h2 className="text-xl font-black text-white">Lost & Found</h2>
+                <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-green-500/20 border border-green-500/30">
+                  <span className="text-xs font-bold text-green-300">🏆 {solvedCount} Solved</span>
+                </div>
+              </div>
               <p className="text-white/60 text-xs mt-0.5">Help reuniting stuff with students.</p>
             </div>
           </div>
@@ -270,6 +296,16 @@ export default function LostFound() {
                       By: <span className="text-white/80 font-bold">{item.contact_name}</span>
                     </div>
                     <div className="flex gap-1.5 flex-shrink-0">
+                      {user?.user_id === item.auth_uid && (
+                        <button
+                          onClick={() => handleResolveItem(item.id)}
+                          className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-bold text-red-300 bg-red-400/10 hover:bg-red-400/20 transition-colors"
+                          title="Mark as solved and delete"
+                        >
+                          <CheckCircle2 className="w-3.5 h-3.5" />
+                          Resolve
+                        </button>
+                      )}
                       <button
                         onClick={() => shareItem(item)}
                         className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-bold text-blue-300 bg-blue-400/10 hover:bg-blue-400/20 transition-colors"

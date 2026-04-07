@@ -31,6 +31,7 @@ pyqs_collection = db['pyqs_notes']
 pinboard_collection = db['mithya_pinboard']
 contacts_collection = db['important_contacts']
 users_collection    = db['mithya_users']
+app_stats_collection = db['app_stats']
 
 # Personalized Space Collections
 user_storage_collection = db['user_storage']
@@ -330,6 +331,7 @@ def create_lost_found_item():
             "phone_number": data.get('phone_number').strip(),
             "type": data.get('type', 'Lost'),
             "image_url": data.get('image_url'),
+            "auth_uid": request.auth_user.get('user_id'),
             "timestamp": utcnow()
         }
         
@@ -349,6 +351,39 @@ def create_lost_found_item():
 
 # ==========================================
 # 🎟️ UPCOMING EVENTS ENDPOINTS
+# ==========================================
+@app.route('/api/lostfound/stats', methods=['GET'])
+def get_lost_found_stats():
+    try:
+        stats = app_stats_collection.find_one({"id": "lost_found"}, {"_id": 0})
+        solved_cases = stats.get('solved_cases', 0) if stats else 0
+        return jsonify({"success": True, "solved_cases": solved_cases})
+    except Exception as e:
+        return jsonify({"success": False, "message": str(e)})
+
+@app.route('/api/lostfound/<item_id>/solve', methods=['DELETE'])
+@require_auth
+def solve_lost_found_item(item_id):
+    try:
+        user_id = request.auth_user.get('user_id')
+        item = lost_found_collection.find_one({"id": item_id})
+        
+        if not item:
+            return jsonify({"success": False, "message": "Item not found"}), 404
+            
+        if item.get('auth_uid') != user_id:
+            return jsonify({"success": False, "message": "Unauthorized: Only the creator can resolve this"}), 403
+            
+        lost_found_collection.delete_one({"id": item_id})
+        app_stats_collection.update_one(
+            {"id": "lost_found"},
+            {"$inc": {"solved_cases": 1}},
+            upsert=True
+        )
+        return jsonify({"success": True, "message": "Marked as solved and deleted"})
+    except Exception as e:
+        return jsonify({"success": False, "message": str(e)})
+
 # ==========================================
 @app.route('/api/events', methods=['GET'])
 def get_events():
