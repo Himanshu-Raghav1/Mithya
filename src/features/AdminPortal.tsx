@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import {
   ShieldCheck, LogOut, CheckCircle2, XCircle, Trash2, Plus, 
   Loader2, Link as LinkIcon, GlobeLock, Book, MessageSquare, 
   Phone, Calendar, MapPin, Upload, Search
