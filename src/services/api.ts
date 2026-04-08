@@ -172,13 +172,25 @@ export async function resolveLostFoundItem(itemId: string, token: string): Promi
   }
 }
 
+export async function adminResolveLostFoundItem(itemId: string, token: string): Promise<ApiResponse<any>> {
+  try {
+    const res = await fetch(`${API_BASE_URL}/api/admin/lostfound/${itemId}/solve`, {
+      method: 'DELETE',
+      headers: { 'Authorization': `Bearer ${token}` }
+    });
+    return await res.json();
+  } catch {
+    return { success: false, message: 'Failed to resolve item' };
+  }
+}
+
 // ==========================================
 // 🎟️ EVENTS (MONGODB API)
 // ==========================================
 
 export async function getEvents(): Promise<ApiResponse<import('../types').EventItem[]>> {
   try {
-    const res = await fetch(`${API_BASE_URL}/api/events`);
+    const res = await fetch(`${API_BASE_URL}/api/activities`);
     return await res.json() as ApiResponse<import('../types').EventItem[]>;
   } catch {
     return { success: false, message: 'Failed to fetch events' };
@@ -187,7 +199,7 @@ export async function getEvents(): Promise<ApiResponse<import('../types').EventI
 
 export async function createEvent(payload: Partial<import('../types').EventItem>): Promise<ApiResponse<import('../types').EventItem>> {
   try {
-    const res = await fetch(`${API_BASE_URL}/api/events`, {
+    const res = await fetch(`${API_BASE_URL}/api/activities`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(payload)
@@ -200,7 +212,7 @@ export async function createEvent(payload: Partial<import('../types').EventItem>
 
 export async function deleteEvent(eventId: string, token: string): Promise<ApiResponse<any>> {
   try {
-    const res = await fetch(`${API_BASE_URL}/api/admin/events/${eventId}`, {
+    const res = await fetch(`${API_BASE_URL}/api/admin/activities/${eventId}`, {
       method: 'DELETE',
       headers: { 'Authorization': `Bearer ${token}` }
     });

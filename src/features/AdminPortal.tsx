@@ -1,15 +1,15 @@
 import { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { 
   ShieldCheck, LogOut, CheckCircle2, XCircle, Trash2, Plus, 
   Loader2, Link as LinkIcon, GlobeLock, Book, MessageSquare, 
-  Phone, Calendar, MapPin, Upload 
+  Phone, Calendar, MapPin, Upload, Search
 } from 'lucide-react';
 import { 
   verifyAdmin, getPendingPyqs, moderatePyq, 
   getForumPosts, deleteVoicePost, deleteVoiceComment,
   getContacts, createContact, deleteContact,
-  getEvents, deleteEvent, getPinboard, createPin, deletePin
+  getEvents, deleteEvent, getPinboard, createPin, deletePin,
+  getLostFoundItems, getLostFoundStats, adminResolveLostFoundItem
 } from '../services/api';
 import { uploadToCloudinary } from '../services/cloudinary';
 import type { ContactCategory, ForumPost, Contact, EventItem, PinItem } from '../types';
@@ -20,7 +20,12 @@ export default function AdminPortal() {
   const [password, setPassword] = useState('');
   const [authLoading, setAuthLoading] = useState(false);
   
-  const [activeTab, setActiveTab] = useState<'pyqs' | 'voice' | 'contacts' | 'events' | 'pinboard'>('pyqs');
+  const [activeTab, setActiveTab] = useState<'pyqs' | 'voice' | 'contacts' | 'events' | 'pinboard' | 'lostfound'>('pyqs');
+
+  // Lost & Found
+  const [lfItems, setLfItems] = useState<any[]>([]);
+  const [loadingLf, setLoadingLf] = useState(false);
+  const [solvedCount, setSolvedCount] = useState(0);
 
   // PYQs
   const [pendingNotes, setPendingNotes] = useState<any[]>([]);
@@ -102,6 +107,17 @@ export default function AdminPortal() {
     setLoadingPins(false);
   };
 
+  const loadLostFound = async () => {
+    setLoadingLf(true);
+    const [res, statsRes] = await Promise.all([
+      getLostFoundItems(),
+      getLostFoundStats()
+    ]);
+    if (res.success && res.data) setLfItems(res.data);
+    if (statsRes.success && statsRes.data) setSolvedCount(statsRes.data.solved_cases);
+    setLoadingLf(false);
+  };
+
   useEffect(() => {
     if (!isAuthenticated) return;
     if (activeTab === 'pyqs') loadPyqs();
@@ -109,6 +125,7 @@ export default function AdminPortal() {
     if (activeTab === 'contacts') loadContacts();
     if (activeTab === 'events') loadEvents();
     if (activeTab === 'pinboard') loadPins();
+    if (activeTab === 'lostfound') loadLostFound();
   }, [activeTab, isAuthenticated]);
 
   const handleModeratePyq = async (id: string, action: 'approve' | 'reject') => {
@@ -196,6 +213,18 @@ export default function AdminPortal() {
     if (res.success) setPins(prev => prev.filter(p => p.id !== id));
   };
 
+  const handleAdminResolveLf = async (id: string) => {
+    if (!confirm("Resolve exactly this case and increase the solved count?")) return;
+    const token = sessionStorage.getItem('admin_token') || '';
+    const res = await adminResolveLostFoundItem(id, token);
+    if (res.success) {
+      setLfItems(prev => prev.filter(i => i.id !== id));
+      setSolvedCount(prev => prev + 1);
+    } else {
+      alert("Error: " + res.message);
+    }
+  };
+
   if (!isAuthenticated) {
     return (
       <div className="p-4 flex flex-col items-center justify-center min-h-[80vh]">
@@ -253,6 +282,10 @@ export default function AdminPortal() {
         </button>
         <button onClick={() => setActiveTab('pinboard')} className={`flex items-center gap-2 px-4 py-2.5 rounded-xl font-bold transition-colors flex-shrink-0 ${activeTab === 'pinboard' ? 'bg-blue-500 text-white' : 'bg-white/5 text-white/60 hover:text-white hover:bg-white/10'}`}>
           <MapPin className="w-4 h-4" /> Pin Board
+        </button>
+        <button onClick={() => setActiveTab('lostfound')} className={`flex items-center gap-2 px-4 py-2.5 rounded-xl font-bold transition-colors flex-shrink-0 ${activeTab === 'lostfound' ? 'bg-blue-500 text-white' : 'bg-white/5 text-white/60 hover:text-white hover:bg-white/10'}`}>
+          <Search className="w-4 h-4" /> Lost/Found 
+          {solvedCount >= 0 && <span className="bg-green-500/20 text-green-300 border border-green-500/30 font-black text-[10px] px-1.5 py-0.5 rounded-full">{solvedCount} Resolved</span>}
         </button>
       </div>
 
@@ -404,6 +437,28 @@ export default function AdminPortal() {
                  ))}
                </div>
              )}
+           </motion.div>
+        )}
+
+        {/* PANEL: LOST & FOUND */}
+        {activeTab === 'lostfound' && (
+           <motion.div key="lostfound" initial={{opacity:0, y:10}} animate={{opacity:1, y:0}} exit={{opacity:0}} className="space-y-4">
+             {loadingLf ? <p className="text-white/50 text-center py-8">Fetching cases...</p> : lfItems.length === 0 ? (
+               <div className="glass-card p-12 text-center border border-white/10"><p className="text-white/60 font-bold">No registered Lost & Found items right now.</p></div>
+             ) : lfItems.map(item => (
+               <div key={item.id} className="flex flex-col sm:flex-row justify-between items-center bg-black/40 border border-white/10 p-4 rounded-xl gap-4" style={{borderLeft: item.type === 'Lost' ? '4px solid #f87171' : '4px solid #4ade80'}}>
+                 {item.image_url && <img src={item.image_url} alt="Item" className="w-20 h-20 object-cover rounded-lg border border-white/10" />}
+                 <div className="flex-1 w-full text-center sm:text-left">
+                   <div className="flex flex-col sm:flex-row items-center sm:items-start gap-2">
+                     <span className={`px-2 py-0.5 rounded text-[10px] font-black uppercase tracking-wider ${item.type === 'Lost' ? 'bg-red-500/20 text-red-300 border border-red-500/30' : 'bg-green-500/20 text-green-300 border border-green-500/30'}`}>{item.type}</span>
+                     <p className="text-white font-bold text-lg leading-none">{item.item_name}</p>
+                   </div>
+                   <p className="text-white/70 text-sm mt-2 line-clamp-3 leading-relaxed">{item.description}</p>
+                   <p className="text-white/50 text-[11px] mt-2 font-bold">Posted By: <span className="text-white/80">{item.contact_name}</span> ({item.phone_number})</p>
+                 </div>
+                 <button onClick={() => handleAdminResolveLf(item.id)} className="w-full sm:w-auto px-4 py-2.5 bg-green-500/10 text-green-400 border border-green-500/20 border-b-2 rounded-xl hover:bg-green-500/20 transition-all flex items-center justify-center gap-2 font-bold text-sm shadow-lg"><CheckCircle2 className="w-5 h-5" /> Mark Solved</button>
+               </div>
+             ))}
            </motion.div>
         )}
 

@@ -146,8 +146,8 @@ def get_posts():
                 pass
 
         for post in posts:
-            liked_by = post.get('liked_by', [])
-            disliked_by = post.get('disliked_by', [])
+            liked_by = post.get('liked_by') or []
+            disliked_by = post.get('disliked_by') or []
             post['likedByMe'] = (current_user_id in liked_by) if current_user_id else False
             post['dislikedByMe'] = (current_user_id in disliked_by) if current_user_id else False
             # Don't expose the full arrays to the client
@@ -393,8 +393,27 @@ def solve_lost_found_item(item_id):
     except Exception as e:
         return jsonify({"success": False, "message": str(e)})
 
+@app.route('/api/admin/lostfound/<item_id>/solve', methods=['DELETE'])
+@require_admin
+def admin_solve_lost_found(item_id):
+    try:
+        item = lost_found_collection.find_one({"id": item_id})
+        
+        if not item:
+            return jsonify({"success": False, "message": "Item not found"}), 404
+            
+        lost_found_collection.delete_one({"id": item_id})
+        app_stats_collection.update_one(
+            {"id": "lost_found"},
+            {"$inc": {"solved_cases": 1}},
+            upsert=True
+        )
+        return jsonify({"success": True, "message": "Item marked as resolved by Admin"})
+    except Exception as e:
+        return jsonify({"success": False, "message": str(e)})
+
 # ==========================================
-@app.route('/api/events', methods=['GET'])
+@app.route('/api/activities', methods=['GET'])
 def get_events():
     try:
         items = list(events_collection.find({}, {"_id": 0}).sort("date", 1))
@@ -402,7 +421,7 @@ def get_events():
     except Exception as e:
         return jsonify({"success": False, "message": str(e)})
 
-@app.route('/api/events', methods=['POST'])
+@app.route('/api/activities', methods=['POST'])
 def create_event():
     try:
         data = request.json
@@ -529,7 +548,7 @@ def delete_pin(pin_id):
     except Exception as e:
         return jsonify({"success": False, "message": str(e)})
 
-@app.route('/api/admin/events/<event_id>', methods=['DELETE'])
+@app.route('/api/admin/activities/<event_id>', methods=['DELETE'])
 @require_admin
 def delete_admin_event(event_id):
     try:

@@ -17,7 +17,6 @@ const tabs: { id: TabId; label: string; emoji: string }[] = [
   { id: 'lostfound', label: 'Lost & Found', emoji: '🔍' },
   { id: 'personalized', label: 'Private Space', emoji: '🔐' },
   { id: 'events', label: 'Concerts & Events', emoji: '🎵' },
-  { id: 'pinboard', label: 'Pin Board', emoji: '📌' },
   { id: 'qrgen', label: 'QR Forge', emoji: '🔳' },
   { id: 'contacts', label: 'Contacts', emoji: '📞' },
   { id: 'quicklinks', label: 'Quick Links', emoji: '🔗' },
@@ -26,11 +25,11 @@ const tabs: { id: TabId; label: string; emoji: string }[] = [
 
 // Bottom bar shows only the 5 most-used tabs on mobile
 const bottomTabs: { id: TabId; label: string; emoji: string }[] = [
-  { id: 'sports',      label: 'Sports',  emoji: '🏆' },
   { id: 'voice',       label: 'Voice',   emoji: '🎙️' },
-  { id: 'pyqs',        label: 'PYQs',    emoji: '📚' },
   { id: 'lostfound',   label: 'Lost',    emoji: '🔍' },
+  { id: 'events',      label: 'Events',  emoji: '🎵' },
   { id: 'personalized',label: 'Private', emoji: '🔐' },
+  { id: 'pyqs',        label: 'PYQs',    emoji: '📚' },
 ];
 
 export default function Navbar({ activeTab, onTabChange }: NavbarProps) {
@@ -77,32 +76,70 @@ export default function Navbar({ activeTab, onTabChange }: NavbarProps) {
             </h1>
           </div>
           <div className="flex items-center gap-2">
+            <motion.button
+              onClick={() => onTabChange('pinboard')}
+              whileHover={{ scale: 1.05, rotate: [-2, 2, -2, 0] }}
+              whileTap={{ scale: 0.95 }}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-[11px] font-black tracking-wider transition-all"
+              style={{
+                background: 'linear-gradient(135deg, rgba(233,30,99,0.15), rgba(156,39,176,0.15))',
+                border: '1px solid rgba(233,30,99,0.3)',
+                color: '#F48FB1',
+                boxShadow: '0 4px 12px rgba(233,30,99,0.15)'
+              }}
+            >
+              📌 <span className="hidden sm:inline">Pin Board</span>
+            </motion.button>
+
             {!user ? (
-              <button
+              <motion.button
                 onClick={() => setShowAuth(true)}
-                className="px-3 py-1.5 rounded-xl text-[11px] font-black text-yellow-400 bg-yellow-400/10 hover:bg-yellow-400/20 border border-yellow-400/20 transition-colors"
+                whileHover={{ scale: 1.05, y: -1 }}
+                whileTap={{ scale: 0.95 }}
+                className="px-4 py-1.5 rounded-xl text-[11px] font-black tracking-wider transition-all"
+                style={{
+                  background: 'linear-gradient(135deg, rgba(255,215,64,0.15), rgba(255,152,0,0.15))',
+                  border: '1px solid rgba(255,215,64,0.3)',
+                  color: '#FFD740',
+                  boxShadow: '0 4px 12px rgba(255,215,64,0.15)'
+                }}
               >
                 Login
-              </button>
+              </motion.button>
             ) : (
-              <div className="relative">
-                <button
+              <div className="relative z-50">
+                <motion.button
                   onClick={() => setShowLogout(v => !v)}
-                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white/10 hover:bg-white/15 transition-colors text-white text-[11px] font-black"
+                  whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.95 }}
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl transition-all text-[11px] font-black tracking-wider"
+                  style={{
+                    background: 'linear-gradient(135deg, rgba(255,255,255,0.1), rgba(255,255,255,0.05))',
+                    border: '1px solid rgba(255,255,255,0.2)',
+                    color: '#fff',
+                    boxShadow: '0 4px 12px rgba(255,255,255,0.05)'
+                  }}
                 >
                   <span className="text-yellow-300">@</span>{user.anon_name}
-                </button>
+                </motion.button>
+                <AnimatePresence>
                 {showLogout && (
-                  <div className="absolute right-0 top-10 bg-[#0d1333] border border-white/15 rounded-xl p-2 z-50 w-40 shadow-xl">
-                    <p className="text-white/30 text-[10px] px-2 pb-1 truncate">{user.email}</p>
+                  <motion.div
+                    initial={{ opacity: 0, y: 10, scale: 0.95 }}
+                    animate={{ opacity: 1, y: 0, scale: 1 }}
+                    exit={{ opacity: 0, y: 10, scale: 0.95 }}
+                    className="absolute right-0 top-10 bg-[#0d1333] border border-white/15 rounded-xl p-2 w-44 shadow-2xl origin-top-right backdrop-blur-xl"
+                  >
+                    <p className="text-white/40 text-[10px] px-2 pb-2 mb-1 border-b border-white/10 truncate font-bold">{user.email}</p>
                     <button
                       onClick={() => { logout(); setShowLogout(false); }}
-                      className="w-full text-left px-3 py-2 text-xs font-bold text-red-400 hover:bg-red-400/10 rounded-lg transition-colors"
+                      className="w-full text-left px-3 py-2 text-xs font-black text-red-400 hover:bg-red-400/15 rounded-lg transition-colors flex items-center gap-2"
                     >
-                      Logout
+                      🚪 Logout
                     </button>
-                  </div>
+                  </motion.div>
                 )}
+                </AnimatePresence>
               </div>
             )}
           </div>
