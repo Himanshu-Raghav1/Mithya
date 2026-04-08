@@ -60,7 +60,7 @@ export default function MITVoice() {
   const [posts, setPosts] = useState<ForumPost[]>([]);
   const [loading, setLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
-  
+
   // Compose and Expand states
   const [isComposeOpen, setIsComposeOpen] = useState(false);
   const [expandedImage, setExpandedImage] = useState<string | null>(null);
@@ -68,7 +68,7 @@ export default function MITVoice() {
   const [newText, setNewText] = useState('');
   const [expandedComments, setExpandedComments] = useState<Set<string>>(new Set());
   const [commentInputs, setCommentInputs] = useState<Record<string, string>>({});
-  
+
   // Image Upload State
   const [selectedImage, setSelectedImage] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
@@ -112,10 +112,10 @@ export default function MITVoice() {
   const handleShare = async () => {
     if (!newText.trim() && !selectedImage) return;
     if (!user || !token) { setShowAuth(true); return; }
-    
+
     setIsUploading(true);
     let uploadedUrl = undefined;
-    
+
     try {
       if (selectedImage) {
         uploadedUrl = await uploadToCloudinary(selectedImage);
@@ -180,7 +180,7 @@ export default function MITVoice() {
       text,
       timestamp: new Date().toISOString()
     };
-    
+
     setPosts(posts.map(p => p.id === postId ? { ...p, comments: [...p.comments, tempComment] } : p));
     setCommentInputs(prev => ({ ...prev, [postId]: '' }));
 
@@ -192,7 +192,7 @@ export default function MITVoice() {
   return (
     <div className="p-4 space-y-4">
       {showAuth && <AuthModal onClose={() => setShowAuth(false)} reason="to interact" />}
-      
+
       {/* Nobita banner */}
       <div className="glass-card p-4 flex items-center gap-4" style={{ background: 'rgba(255,215,64,0.12)', border: '1px solid rgba(255,215,64,0.25)' }}>
         <div className="float-anim">
@@ -200,10 +200,10 @@ export default function MITVoice() {
         </div>
         <div>
           <div className="flex items-center gap-2 mb-1">
-            <span className="text-yellow-300 font-black text-sm">⚠️ STRICT RULE</span>
+            <span className="text-yellow-300 font-black text-sm">⚠️ EACH VOICE MATTERS</span>
           </div>
           <p className="text-white/90 text-[13px] font-semibold leading-relaxed">
-            "Apki awaz supporting voice but no acceptance to community hate"
+            "Apki awaz, supporting voice without revealing identity but strict action to community hate"
           </p>
         </div>
       </div>
@@ -223,7 +223,7 @@ export default function MITVoice() {
       <AnimatePresence>
         {isComposeOpen && (
           <div className="fixed inset-0 z-[60] flex items-end sm:items-center justify-center bg-black/60 backdrop-blur-sm"
-               onClick={() => setIsComposeOpen(false)}>
+            onClick={() => setIsComposeOpen(false)}>
             <motion.div
               initial={{ y: '100%' }}
               animate={{ y: 0 }}
@@ -237,9 +237,9 @@ export default function MITVoice() {
             >
               <div className="p-4 border-b border-white/10 flex justify-between items-center bg-black/20">
                 <h3 className="text-white font-black text-lg">Share Anonymously</h3>
-                <button onClick={() => setIsComposeOpen(false)} className="p-2 bg-white/5 rounded-full hover:bg-white/10"><X className="text-white/60 w-5 h-5"/></button>
+                <button onClick={() => setIsComposeOpen(false)} className="p-2 bg-white/5 rounded-full hover:bg-white/10"><X className="text-white/60 w-5 h-5" /></button>
               </div>
-              
+
               <div className="p-4 space-y-3">
                 <textarea
                   value={newText}
@@ -248,11 +248,11 @@ export default function MITVoice() {
                   rows={4}
                   className="w-full p-3 rounded-xl text-white placeholder-white/30 font-medium resize-none outline-none text-sm bg-black/30 border border-white/10 focus:border-blue-400/50 transition-colors"
                 />
-                
+
                 {previewUrl && (
                   <div className="relative inline-block w-full">
                     <img src={previewUrl} alt="Preview" className="w-full h-32 rounded-xl object-cover border border-white/20" />
-                    <button 
+                    <button
                       onClick={clearImage} disabled={isUploading}
                       className="absolute top-2 right-2 bg-red-500 text-white rounded-full p-1 shadow-lg hover:scale-110 transition-transform"
                     ><X className="w-4 h-4" /></button>
@@ -264,7 +264,7 @@ export default function MITVoice() {
                     <span className="text-white/40 text-xs">As: <span className="text-blue-300 font-bold">{user?.anon_name ?? 'anonymous'}</span></span>
                     <div>
                       <input type="file" ref={fileInputRef} onChange={handleImageChange} accept="image/*" className="hidden" />
-                      <motion.button 
+                      <motion.button
                         whileTap={{ scale: 0.9 }}
                         onClick={() => fileInputRef.current?.click()}
                         disabled={isUploading}
@@ -274,7 +274,7 @@ export default function MITVoice() {
                       </motion.button>
                     </div>
                   </div>
-                  
+
                   <motion.button
                     whileHover={{ scale: 1.05 }}
                     whileTap={{ scale: 0.95 }}
@@ -283,7 +283,7 @@ export default function MITVoice() {
                     className="px-6 py-2.5 rounded-xl font-black text-white text-sm flex items-center gap-2 disabled:opacity-40"
                     style={{ background: 'linear-gradient(135deg, #00A8E8, #0077B6)' }}
                   >
-                     {isUploading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
+                    {isUploading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
                     {isUploading ? 'Sending...' : 'Post'}
                   </motion.button>
                 </div>
@@ -297,17 +297,17 @@ export default function MITVoice() {
       <AnimatePresence>
         {expandedImage && (
           <div className="fixed inset-0 z-[70] bg-black/90 flex items-center justify-center p-4 backdrop-blur-sm"
-               onClick={() => setExpandedImage(null)}>
+            onClick={() => setExpandedImage(null)}>
             <motion.span
               initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
               className="absolute top-6 right-6 p-2 bg-white/10 rounded-full"
             >
               <X className="w-6 h-6 text-white" />
             </motion.span>
-            <motion.img 
+            <motion.img
               initial={{ scale: 0.9, y: 20 }} animate={{ scale: 1, y: 0 }} exit={{ scale: 0.9, opacity: 0 }}
-              src={expandedImage} 
-              className="max-w-full max-h-[85vh] object-contain rounded-xl shadow-2xl" 
+              src={expandedImage}
+              className="max-w-full max-h-[85vh] object-contain rounded-xl shadow-2xl"
               onClick={(e) => e.stopPropagation()}
             />
           </div>
@@ -369,7 +369,7 @@ export default function MITVoice() {
 
               {/* Attached Image */}
               {post.image_url && (
-                <motion.div 
+                <motion.div
                   whileTap={{ scale: 0.98 }}
                   className="mt-3 rounded-xl overflow-hidden border border-white/5 cursor-pointer"
                   onClick={() => setExpandedImage(post.image_url!)}
