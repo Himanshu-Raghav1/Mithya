@@ -19,7 +19,6 @@ const tabs: { id: TabId; label: string; emoji: string }[] = [
   { id: 'events', label: 'Concerts & Events', emoji: '🎵' },
   { id: 'qrgen', label: 'QR Forge', emoji: '🔳' },
   { id: 'contacts', label: 'Contacts', emoji: '📞' },
-  { id: 'quicklinks', label: 'Quick Links', emoji: '🔗' },
   { id: 'admin', label: 'Admin Portal', emoji: '🔒' }
 ];
 
@@ -76,6 +75,21 @@ export default function Navbar({ activeTab, onTabChange }: NavbarProps) {
             </h1>
           </div>
           <div className="flex items-center gap-2">
+            <motion.button
+              onClick={() => onTabChange('quicklinks')}
+              whileHover={{ scale: 1.05, y: -1 }}
+              whileTap={{ scale: 0.95 }}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-[11px] font-black tracking-wider transition-all"
+              style={{
+                background: 'linear-gradient(135deg, rgba(0,188,212,0.15), rgba(38,198,218,0.15))',
+                border: '1px solid rgba(0,188,212,0.3)',
+                color: '#84FFFF',
+                boxShadow: '0 4px 12px rgba(0,188,212,0.15)'
+              }}
+            >
+              🔗 <span className="hidden sm:inline">Quick Links</span>
+            </motion.button>
+
             <motion.button
               onClick={() => onTabChange('pinboard')}
               whileHover={{ scale: 1.05, rotate: [-2, 2, -2, 0] }}

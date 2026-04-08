@@ -3,9 +3,9 @@ import { motion } from 'framer-motion';
 import { useAuth } from '../context/AuthContext';
 import AuthModal from '../components/AuthModal';
 import { Bell, Wallet, Target, Lock, Plus, TrendingDown, Upload, Calendar, Loader2, Trash2 } from 'lucide-react';
-import { 
-  getPrivateDeadlines, submitPrivateDeadline, deletePrivateDeadline, 
-  getUrMoney, setUrMoneyBudget, addUrMoneyExpense 
+import {
+  getPrivateDeadlines, submitPrivateDeadline, deletePrivateDeadline,
+  getUrMoney, setUrMoneyBudget, addUrMoneyExpense
 } from '../services/api';
 import { uploadToCloudinary } from '../services/cloudinary';
 
@@ -34,7 +34,7 @@ export default function PersonalizedSpace() {
   const [budget, setBudget] = useState<number>(0);
   const [isBudgetSet, setIsBudgetSet] = useState(false);
   const [monthStart, setMonthStart] = useState<string>('');
-  
+
   const [expenses, setExpenses] = useState<Expense[]>([]);
   const [expenseTitle, setExpenseTitle] = useState('');
   const [expenseAmount, setExpenseAmount] = useState('');
@@ -80,10 +80,10 @@ export default function PersonalizedSpace() {
   const handleAddExpense = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!expenseTitle || !expenseAmount || !user) return;
-    
+
     const token = localStorage.getItem('mithya_token') || '';
     const res = await addUrMoneyExpense(expenseTitle, parseFloat(expenseAmount), token);
-    
+
     if (res.success && res.data) {
       setExpenses([res.data, ...expenses]);
       setExpenseTitle('');
@@ -113,7 +113,7 @@ export default function PersonalizedSpace() {
 
     let finalUrl = '';
     let fileSize = 0;
-    
+
     if (dlFile) {
       fileSize = dlFile.size;
     }
@@ -153,7 +153,7 @@ export default function PersonalizedSpace() {
     } else {
       alert(res.message || 'Error saving deadline');
     }
-    
+
     setIsUploadingDL(false);
   };
 
@@ -190,7 +190,7 @@ export default function PersonalizedSpace() {
             </div>
             <h2 className="text-xl font-black text-white">Your Private Space 🔐</h2>
             <p className="text-white/50 text-sm leading-relaxed">
-              Login to track your academic deadlines, manage your budget, and build skills.
+              Login to track your LCA,CCA,academic deadlines, manage your budget, and build skills.
             </p>
             <button
               onClick={() => setShowAuth(true)}
@@ -238,10 +238,10 @@ export default function PersonalizedSpace() {
             <motion.div
               className="absolute top-1.5 bottom-1.5 w-[calc(33.33%-4px)] rounded-xl z-0"
               style={{ background: 'rgba(255,255,255,0.15)' }}
-              animate={{ 
-                x: activeTab === 'deadline' ? '2px' : 
-                   activeTab === 'ur_money' ? 'calc(100% + 4px)' : 
-                   'calc(200% + 6px)' 
+              animate={{
+                x: activeTab === 'deadline' ? '2px' :
+                  activeTab === 'ur_money' ? 'calc(100% + 4px)' :
+                    'calc(200% + 6px)'
               }}
               transition={{ type: 'spring', stiffness: 300, damping: 25 }}
             />
@@ -250,20 +250,20 @@ export default function PersonalizedSpace() {
           {/* Tab 1: Deadlines */}
           {activeTab === 'deadline' && (
             <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-4">
-              
+
               <div className="glass-card p-6 border border-white/10" style={{ background: 'linear-gradient(145deg, rgba(239,68,68,0.1), rgba(0,0,0,0.4))' }}>
                 <h3 className="text-xl font-black text-white flex items-center gap-2 mb-1">
                   <Bell className="w-5 h-5 text-red-400" /> Upcoming Deadlines
                 </h3>
                 <p className="text-white/50 text-xs mb-6">Track your LCA, CCA, Assignments, and Tutorials here.</p>
-                
+
                 <form onSubmit={handleAddDeadline} className="space-y-4">
                   <div className="grid grid-cols-2 gap-3">
                     <div className="col-span-2 sm:col-span-1">
                       <label className="text-xs font-bold text-white/60 ml-1">Title *</label>
                       <input required type="text" value={dlTitle} onChange={e => setDlTitle(e.target.value)} placeholder="e.g. Physics Lab Report" className="w-full mt-1 bg-black/30 border border-white/10 rounded-xl px-4 py-2.5 text-white outline-none focus:border-red-400 text-sm" />
                     </div>
-                    
+
                     <div>
                       <label className="text-xs font-bold text-white/60 ml-1">Type *</label>
                       <select value={dlType} onChange={e => setDlType(e.target.value)} className="w-full mt-1 bg-black/30 border border-white/10 rounded-xl px-4 py-3 text-white outline-none focus:border-red-400 text-sm">
@@ -319,7 +319,7 @@ export default function PersonalizedSpace() {
                           <Upload className="w-3 h-3" /> View File
                         </a>
                       )}
-                      
+
                       <button onClick={() => handleDeleteDeadline(dl.id)} className="ml-2 p-1.5 text-white/30 hover:text-red-400 hover:bg-red-500/10 rounded-lg transition-colors">
                         <Trash2 className="w-4 h-4" />
                       </button>
@@ -333,7 +333,7 @@ export default function PersonalizedSpace() {
           {/* Tab 2: Ur Money */}
           {activeTab === 'ur_money' && (
             <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-4">
-              
+
               {/* Wallet Header Card */}
               <div className="glass-card p-6 border border-white/10" style={{ background: 'linear-gradient(145deg, rgba(16,185,129,0.1), rgba(0,0,0,0.4))' }}>
                 <div className="flex justify-between items-start mb-6">
@@ -360,7 +360,7 @@ export default function PersonalizedSpace() {
                 {isBudgetSet ? (
                   <>
                     <div className="w-full h-3 bg-black/40 rounded-full overflow-hidden border border-white/5 mb-2">
-                      <div 
+                      <div
                         className={`h-full rounded-full transition-all duration-500 ${budgetPercentage > 80 ? 'bg-red-500' : budgetPercentage > 50 ? 'bg-yellow-400' : 'bg-emerald-500'}`}
                         style={{ width: `${Math.min(budgetPercentage, 100)}%` }}
                       />
@@ -399,16 +399,16 @@ export default function PersonalizedSpace() {
                 <div className="glass-card p-5 border border-white/10">
                   <h4 className="text-sm font-bold text-white mb-3">Add Expense</h4>
                   <form onSubmit={handleAddExpense} className="flex gap-2">
-                    <input 
-                      type="text" 
-                      placeholder="What did you buy?" 
+                    <input
+                      type="text"
+                      placeholder="What did you buy?"
                       value={expenseTitle}
                       onChange={e => setExpenseTitle(e.target.value)}
                       className="flex-1 bg-black/30 border border-white/10 rounded-xl px-3 py-2.5 text-white outline-none focus:border-emerald-400 text-sm"
                     />
-                    <input 
-                      type="number" 
-                      placeholder="₹ Amount" 
+                    <input
+                      type="number"
+                      placeholder="₹ Amount"
                       value={expenseAmount}
                       onChange={e => setExpenseAmount(e.target.value)}
                       className="w-24 bg-black/30 border border-white/10 rounded-xl px-3 py-2.5 text-white outline-none focus:border-emerald-400 text-sm"
@@ -458,8 +458,8 @@ export default function PersonalizedSpace() {
           {/* Reminder Popup Modal */}
           {showReminderPrompt && (
             <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
-              <motion.div 
-                initial={{ scale: 0.9, opacity: 0 }} 
+              <motion.div
+                initial={{ scale: 0.9, opacity: 0 }}
                 animate={{ scale: 1, opacity: 1 }}
                 className="glass-card w-full max-w-sm p-6 space-y-4 border border-blue-500/30"
               >
@@ -469,19 +469,19 @@ export default function PersonalizedSpace() {
                   </div>
                   <h3 className="text-lg font-bold text-white leading-tight">Allow reminder?</h3>
                 </div>
-                
+
                 <p className="text-sm text-white/70">
                   Allow reminder for sending alert before assignment, submission deadline, LCA, CCA notification.
                 </p>
 
                 <div className="flex gap-3 pt-2">
-                  <button 
+                  <button
                     onClick={handleDenyReminder}
                     className="flex-1 py-2.5 rounded-lg text-sm font-bold text-white/50 bg-white/5 hover:bg-white/10 transition-colors"
                   >
                     Not Now
                   </button>
-                  <button 
+                  <button
                     onClick={handleAllowReminder}
                     className="flex-1 py-2.5 rounded-lg text-sm font-black text-black bg-blue-400 hover:bg-blue-300 transition-colors"
                   >

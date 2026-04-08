@@ -20,7 +20,7 @@ import type { TabId } from './types';
 
 export default function App() {
   const [showWelcome, setShowWelcome] = useState(true);
-  const [activeTab, setActiveTab] = useState<TabId>('sports');
+  const [activeTab, setActiveTab] = useState<TabId>('voice');
 
   // MITVoice state is now managed directly by MITVoice.tsx via backend API
 

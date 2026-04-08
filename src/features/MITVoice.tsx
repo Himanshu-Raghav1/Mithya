@@ -202,9 +202,8 @@ export default function MITVoice() {
           <div className="flex items-center gap-2 mb-1">
             <span className="text-yellow-300 font-black text-sm">⚠️ STRICT RULE</span>
           </div>
-          <p className="text-white/90 text-sm font-semibold leading-relaxed">
-            "Support the voice without revealing your identity.<br />
-            <span className="text-yellow-200">Do not spread hate against the community.</span>"
+          <p className="text-white/90 text-[13px] font-semibold leading-relaxed">
+            "Apki awaz supporting voice but no acceptance to community hate"
           </p>
         </div>
       </div>
