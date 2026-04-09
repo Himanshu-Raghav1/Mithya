@@ -4,6 +4,7 @@ import json
 import base64
 import time
 import gc
+import os
 from datetime import datetime, timezone, timedelta
 from pymongo import MongoClient
 from playwright.sync_api import sync_playwright
@@ -18,7 +19,6 @@ IST = timezone(timedelta(hours=5, minutes=30))
 # ==========================================
 # ⚙️ CONFIGURATION 
 # ==========================================
-# Note: In the future, you should move these to Render Environment Variables for security!
 SUPABASE_URL = "https://kmqhrlinvxqnipvvlvwv.supabase.co"
 API_KEY = "sb_publishable_kitYyNDBQZI32jyejgStcQ_fuVgY12m" 
 
@@ -26,7 +26,11 @@ EMAIL = "1262253515@mitwpu.edu.in"
 PASSWORD = "smart@1262253515" 
 LOGIN_URL = "https://sports.mitwpu.edu.in/login"
 
-MONGO_URI = "mongodb+srv://Himanshu_Raghav:Divyanshu1@clusterh.jhljyt2.mongodb.net/?appName=ClusterH"
+# ✅ SECURE: Read from environment variable (set this in Render dashboard)
+MONGO_URI = os.environ.get("MONGO_URI", "")
+if not MONGO_URI:
+    print("❌ FATAL: MONGO_URI environment variable is not set! Add it to your Render service.")
+    sys.exit(1)
 
 print("Attempting to connect to MongoDB...")
 try:

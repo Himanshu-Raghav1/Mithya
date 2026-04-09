@@ -38,13 +38,10 @@ export default function AuthModal({ onClose, reason }: AuthModalProps) {
   const handleSendOtp = async () => {
     setError('');
     let finalEmail = email.trim().toLowerCase();
-    
-    if (!finalEmail.includes('@')) {
-      finalEmail = `${finalEmail}@mitwpu.edu.in`;
-    }
 
-    if (!finalEmail.endsWith('@mitwpu.edu.in')) {
-      return setError('Only @mitwpu.edu.in emails or PRN numbers are allowed');
+    // Basic email format check
+    if (!finalEmail.includes('@') || !finalEmail.includes('.')) {
+      return setError('Please enter a valid email address (e.g. yourname@gmail.com)');
     }
 
     setIsLoading(true);
@@ -219,14 +216,14 @@ export default function AuthModal({ onClose, reason }: AuthModalProps) {
 
                   <div>
                     <label style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '11px', fontWeight: 700, color: 'rgba(255,255,255,0.45)', marginBottom: '8px' }}>
-                      <Mail className="w-3 h-3" /> MIT-WPU Email
+                      <Mail className="w-3 h-3" /> Your Email
                     </label>
                     <input
                       type="email"
                       value={email}
                       onChange={e => setEmail(e.target.value)}
                       onKeyDown={e => e.key === 'Enter' && handleSendOtp()}
-                      placeholder="1234567890@mitwpu.edu.in"
+                      placeholder="yourname@gmail.com"
                       autoFocus
                       style={{
                         width: '100%', padding: '13px 16px', borderRadius: '14px',
@@ -266,7 +263,7 @@ export default function AuthModal({ onClose, reason }: AuthModalProps) {
                   </motion.button>
 
                   <p style={{ textAlign: 'center', fontSize: '10px', color: 'rgba(255,255,255,0.25)' }}>
-                    Only MIT-WPU students can join. No password needed.
+                    Any valid email works. No password needed.
                   </p>
                 </motion.div>
               )}

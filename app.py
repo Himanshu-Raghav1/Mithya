@@ -9,11 +9,10 @@ def utcnow() -> str:
     return datetime.now(timezone.utc).strftime('%Y-%m-%dT%H:%M:%SZ')
 
 app = Flask(__name__)
-# Allow Authorization header so the frontend can send JWT tokens
+# Allow Authorization header so the frontend can send JWT tokens safely from any Vercel domain
 CORS(app, 
-     origins=["https://mithya.vercel.app", "http://localhost:5173", "https://mithya.social", "https://www.mithya.social"], 
-     supports_credentials=True, 
-     allow_headers=["Content-Type", "Authorization"])
+     resources={r"/*": {"origins": "*"}},
+     allow_headers=["*"])
 
 # ==========================================
 # ⚙️ MONGODB CONNECTION

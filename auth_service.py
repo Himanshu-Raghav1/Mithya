@@ -118,22 +118,18 @@ def health():
 @app.route('/auth/send-otp', methods=['POST'])
 def send_otp():
     """
-    Step 1: Validate MIT email, check if new/returning, send OTP via Supabase.
+    Step 1: Validate email, check if new/returning, send OTP via Supabase.
     Accepts: { email }
     Returns: { success, is_new, message }
     """
     try:
         data  = request.json or {}
         raw_email = data.get('email', '').strip().lower()
-        
-        # Auto-append domain if they just sent a PRN or Name
-        if '@' not in raw_email and len(raw_email) > 0:
-            email = f"{raw_email}@mitwpu.edu.in"
-        else:
-            email = raw_email
+        email = raw_email
 
-        if not email.endswith('@mitwpu.edu.in'):
-            return jsonify({"success": False, "message": "Only @mitwpu.edu.in emails or PRN numbers are allowed 📧"}), 400
+        # Basic format check only — any valid email is allowed
+        if '@' not in email or '.' not in email.split('@')[-1]:
+            return jsonify({"success": False, "message": "Please enter a valid email address 📧"}), 400
 
         # Check Supabase profiles table to determine if new/returning user
         existing_profile = get_profile_by_email(email)
