@@ -74,88 +74,92 @@ export default function Navbar({ activeTab, onTabChange }: NavbarProps) {
               MITHYA
             </h1>
           </div>
-          <div className="flex items-center gap-2">
-            <motion.button
-              onClick={() => onTabChange('quicklinks')}
-              whileHover={{ scale: 1.05, y: -1 }}
-              whileTap={{ scale: 0.95 }}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-[11px] font-black tracking-wider transition-all"
-              style={{
-                background: 'linear-gradient(135deg, rgba(0,188,212,0.15), rgba(38,198,218,0.15))',
-                border: '1px solid rgba(0,188,212,0.3)',
-                color: '#84FFFF',
-                boxShadow: '0 4px 12px rgba(0,188,212,0.15)'
-              }}
-            >
-              🔗 <span className="hidden sm:inline">Quick Links</span>
-            </motion.button>
-
-            <motion.button
-              onClick={() => onTabChange('pinboard')}
-              whileHover={{ scale: 1.05, rotate: [-2, 2, -2, 0] }}
-              whileTap={{ scale: 0.95 }}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-[11px] font-black tracking-wider transition-all"
-              style={{
-                background: 'linear-gradient(135deg, rgba(233,30,99,0.15), rgba(156,39,176,0.15))',
-                border: '1px solid rgba(233,30,99,0.3)',
-                color: '#F48FB1',
-                boxShadow: '0 4px 12px rgba(233,30,99,0.15)'
-              }}
-            >
-              📌 <span className="hidden sm:inline">Pin Board</span>
-            </motion.button>
-
-            {!user ? (
+          <div className="flex flex-col sm:flex-row items-end sm:items-center gap-2">
+            <div className="flex items-center gap-2 order-2 sm:order-1 mt-1 sm:mt-0">
               <motion.button
-                onClick={() => setShowAuth(true)}
+                onClick={() => onTabChange('quicklinks')}
                 whileHover={{ scale: 1.05, y: -1 }}
                 whileTap={{ scale: 0.95 }}
-                className="px-4 py-1.5 rounded-xl text-[11px] font-black tracking-wider transition-all"
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-[11px] font-black tracking-wider transition-all"
                 style={{
-                  background: 'linear-gradient(135deg, rgba(255,215,64,0.15), rgba(255,152,0,0.15))',
-                  border: '1px solid rgba(255,215,64,0.3)',
-                  color: '#FFD740',
-                  boxShadow: '0 4px 12px rgba(255,215,64,0.15)'
+                  background: 'linear-gradient(135deg, rgba(0,188,212,0.15), rgba(38,198,218,0.15))',
+                  border: '1px solid rgba(0,188,212,0.3)',
+                  color: '#84FFFF',
+                  boxShadow: '0 4px 12px rgba(0,188,212,0.15)'
                 }}
               >
-                Login
+                🔗 <span className="hidden sm:inline">Quick Links</span>
               </motion.button>
-            ) : (
-              <div className="relative z-50">
+
+              <motion.button
+                onClick={() => onTabChange('pinboard')}
+                whileHover={{ scale: 1.05, rotate: [-2, 2, -2, 0] }}
+                whileTap={{ scale: 0.95 }}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-[11px] font-black tracking-wider transition-all"
+                style={{
+                  background: 'linear-gradient(135deg, rgba(233,30,99,0.15), rgba(156,39,176,0.15))',
+                  border: '1px solid rgba(233,30,99,0.3)',
+                  color: '#F48FB1',
+                  boxShadow: '0 4px 12px rgba(233,30,99,0.15)'
+                }}
+              >
+                📌 <span className="hidden sm:inline">Pin Board</span>
+              </motion.button>
+            </div>
+
+            <div className="order-1 sm:order-2">
+              {!user ? (
                 <motion.button
-                  onClick={() => setShowLogout(v => !v)}
-                  whileHover={{ scale: 1.05 }}
+                  onClick={() => setShowAuth(true)}
+                  whileHover={{ scale: 1.05, y: -1 }}
                   whileTap={{ scale: 0.95 }}
-                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl transition-all text-[11px] font-black tracking-wider"
+                  className="px-4 py-1.5 rounded-xl text-[11px] font-black tracking-wider transition-all"
                   style={{
-                    background: 'linear-gradient(135deg, rgba(255,255,255,0.1), rgba(255,255,255,0.05))',
-                    border: '1px solid rgba(255,255,255,0.2)',
-                    color: '#fff',
-                    boxShadow: '0 4px 12px rgba(255,255,255,0.05)'
+                    background: 'linear-gradient(135deg, rgba(255,215,64,0.15), rgba(255,152,0,0.15))',
+                    border: '1px solid rgba(255,215,64,0.3)',
+                    color: '#FFD740',
+                    boxShadow: '0 4px 12px rgba(255,215,64,0.15)'
                   }}
                 >
-                  <span className="text-yellow-300">@</span>{user.anon_name}
+                  Login
                 </motion.button>
-                <AnimatePresence>
-                {showLogout && (
-                  <motion.div
-                    initial={{ opacity: 0, y: 10, scale: 0.95 }}
-                    animate={{ opacity: 1, y: 0, scale: 1 }}
-                    exit={{ opacity: 0, y: 10, scale: 0.95 }}
-                    className="absolute right-0 top-10 bg-[#0d1333] border border-white/15 rounded-xl p-2 w-44 shadow-2xl origin-top-right backdrop-blur-xl"
+              ) : (
+                <div className="relative z-50">
+                  <motion.button
+                    onClick={() => setShowLogout(v => !v)}
+                    whileHover={{ scale: 1.05 }}
+                    whileTap={{ scale: 0.95 }}
+                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl transition-all text-[11px] font-black tracking-wider"
+                    style={{
+                      background: 'linear-gradient(135deg, rgba(255,255,255,0.1), rgba(255,255,255,0.05))',
+                      border: '1px solid rgba(255,255,255,0.2)',
+                      color: '#fff',
+                      boxShadow: '0 4px 12px rgba(255,255,255,0.05)'
+                    }}
                   >
-                    <p className="text-white/40 text-[10px] px-2 pb-2 mb-1 border-b border-white/10 truncate font-bold">{user.email}</p>
-                    <button
-                      onClick={() => { logout(); setShowLogout(false); }}
-                      className="w-full text-left px-3 py-2 text-xs font-black text-red-400 hover:bg-red-400/15 rounded-lg transition-colors flex items-center gap-2"
+                    <span className="text-yellow-300">@</span>{user.anon_name}
+                  </motion.button>
+                  <AnimatePresence>
+                  {showLogout && (
+                    <motion.div
+                      initial={{ opacity: 0, y: 10, scale: 0.95 }}
+                      animate={{ opacity: 1, y: 0, scale: 1 }}
+                      exit={{ opacity: 0, y: 10, scale: 0.95 }}
+                      className="absolute right-0 top-10 bg-[#0d1333] border border-white/15 rounded-xl p-2 w-44 shadow-2xl origin-top-right backdrop-blur-xl"
                     >
-                      🚪 Logout
-                    </button>
-                  </motion.div>
-                )}
-                </AnimatePresence>
-              </div>
-            )}
+                      <p className="text-white/40 text-[10px] px-2 pb-2 mb-1 border-b border-white/10 truncate font-bold">{user.email}</p>
+                      <button
+                        onClick={() => { logout(); setShowLogout(false); }}
+                        className="w-full text-left px-3 py-2 text-xs font-black text-red-400 hover:bg-red-400/15 rounded-lg transition-colors flex items-center gap-2"
+                      >
+                        🚪 Logout
+                      </button>
+                    </motion.div>
+                  )}
+                  </AnimatePresence>
+                </div>
+              )}
+            </div>
           </div>
         </div>
 

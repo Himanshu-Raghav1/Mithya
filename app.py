@@ -47,8 +47,10 @@ user_storage_collection = db['user_storage']
 private_deadlines_collection = db['private_deadlines']
 ur_money_collection = db['ur_money']
 
-ADMIN_PASSWORD = os.environ.get("ADMIN_PASSWORD") or ""
-SECRET_KEY     = os.environ.get("SECRET_KEY") or ""
+ADMIN_PASSWORD     = os.environ.get("ADMIN_PASSWORD") or ""
+SECRET_KEY         = os.environ.get("SECRET_KEY") or ""
+SUPABASE_JWT_SECRET = os.environ.get("SUPABASE_JWT_SECRET") or ""
+
 if not SECRET_KEY:
     raise RuntimeError("SECRET_KEY environment variable is not set!")
 if not ADMIN_PASSWORD:
@@ -57,6 +59,28 @@ if not ADMIN_PASSWORD:
 # ==========================================
 # 🔐 JWT AUTH DECORATOR
 # ==========================================
+def decode_token(token: str):
+    """
+    Try decoding the JWT with Supabase's JWT secret first (for tokens issued
+    directly by Supabase after OTP login), then fall back to the app's own
+    SECRET_KEY (for tokens issued by auth_service.py).
+    Raises jwt.InvalidTokenError if neither secret works.
+    """
+    secrets_to_try = []
+    if SUPABASE_JWT_SECRET:
+        secrets_to_try.append(SUPABASE_JWT_SECRET)
+    secrets_to_try.append(SECRET_KEY)
+
+    last_exc = None
+    for secret in secrets_to_try:
+        try:
+            return jwt.decode(token, secret, algorithms=["HS256"], options={"verify_aud": False})
+        except jwt.ExpiredSignatureError:
+            raise  # Expired is definitive — no need to try other secrets
+        except jwt.InvalidTokenError as e:
+            last_exc = e
+    raise last_exc
+
 def require_auth(f):
     @wraps(f)
     def decorated(*args, **kwargs):
@@ -64,16 +88,15 @@ def require_auth(f):
         if not token:
             return jsonify({"success": False, "message": "Login required to do this 🔒"}), 401
         try:
-            # We ignore audience check since Supabase puts 'authenticated' in aud, 
-            # and verify the token signature using the Supabase JWT SECRET_KEY.
-            payload = jwt.decode(token, SECRET_KEY, algorithms=["HS256"], options={"verify_aud": False})
-            
-            # Map Supabase structure back to our app's internal AuthUser format
+            payload = decode_token(token)
+
+            # Map both Supabase JWT structure and custom JWT structure
             user_id = payload.get('sub') or payload.get('user_id')
             user_meta = payload.get('user_metadata', {})
             anon_name = user_meta.get('anon_name') or payload.get('anon_name') or "MithyaUser"
-            
-            request.auth_user = {"user_id": user_id, "email": payload.get('email'), "anon_name": anon_name}
+            email = payload.get('email') or user_meta.get('email') or ""
+
+            request.auth_user = {"user_id": user_id, "email": email, "anon_name": anon_name}
         except jwt.ExpiredSignatureError:
             return jsonify({"success": False, "message": "Session expired, please log in again"}), 401
         except jwt.InvalidTokenError:
@@ -140,7 +163,7 @@ def get_posts():
         if auth_header.startswith('Bearer '):
             try:
                 token = auth_header.replace('Bearer ', '')
-                payload = jwt.decode(token, SECRET_KEY, algorithms=["HS256"], options={"verify_aud": False})
+                payload = decode_token(token)
                 current_user_id = payload.get('sub') or payload.get('user_id')
             except Exception:
                 pass
@@ -254,7 +277,7 @@ def interact_post(post_id, action):
         if auth_header.startswith('Bearer '):
             try:
                 token = auth_header.replace('Bearer ', '')
-                payload = jwt.decode(token, SECRET_KEY, algorithms=["HS256"], options={"verify_aud": False})
+                payload = decode_token(token)
                 user_id = payload.get('sub') or payload.get('user_id')
             except Exception:
                 pass
