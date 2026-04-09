@@ -60,6 +60,7 @@ export default function MITVoice() {
   const [posts, setPosts] = useState<ForumPost[]>([]);
   const [loading, setLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const [fetchError, setFetchError] = useState<string | null>(null);
 
   // Compose and Expand states
   const [isComposeOpen, setIsComposeOpen] = useState(false);
@@ -77,9 +78,13 @@ export default function MITVoice() {
 
   const loadPosts = async (isRefresh = false) => {
     if (isRefresh) setIsRefreshing(true);
+    else setFetchError(null);
     const res = await getForumPosts(token || undefined);
     if (res.success && res.data) {
       setPosts(res.data);
+      setFetchError(null);
+    } else if (!res.success) {
+      setFetchError(res.message || 'Something went wrong');
     }
     setLoading(false);
     if (isRefresh) setIsRefreshing(false);
@@ -324,6 +329,18 @@ export default function MITVoice() {
           <SkeletonPost />
           <SkeletonPost />
           <SkeletonPost />
+        </div>
+      ) : fetchError ? (
+        <div className="text-center py-12 space-y-4">
+          <span className="text-4xl">😴</span>
+          <p className="text-white/60 text-sm font-semibold px-4">{fetchError}</p>
+          <button
+            onClick={() => { setLoading(true); loadPosts(); }}
+            className="px-6 py-2.5 rounded-xl font-black text-sm text-white"
+            style={{ background: 'linear-gradient(135deg, #00A8E8, #0077B6)' }}
+          >
+            🔄 Retry
+          </button>
         </div>
       ) : posts.length === 0 ? (
         <div className="text-center py-10">

@@ -66,13 +66,20 @@ export async function searchSportsSlots(game: string): Promise<ApiResponse<SlotR
 // ==========================================
 
 export async function getForumPosts(token?: string): Promise<ApiResponse<ForumPost[]>> {
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), API_TIMEOUT_MS);
   try {
     const headers: Record<string, string> = {};
     if (token) headers['Authorization'] = `Bearer ${token}`;
-    const res = await fetch(`${API_BASE_URL}/api/voice/posts`, { headers });
+    const res = await fetch(`${API_BASE_URL}/api/voice/posts`, { headers, signal: controller.signal });
+    clearTimeout(timeoutId);
     return await res.json() as ApiResponse<ForumPost[]>;
-  } catch {
-    return { success: false, message: 'Failed to fetch posts' };
+  } catch (err: any) {
+    clearTimeout(timeoutId);
+    if (err?.name === 'AbortError') {
+      return { success: false, message: 'Server took too long to respond. It may be starting up — tap Retry.' };
+    }
+    return { success: false, message: 'Failed to fetch posts. Check your connection.' };
   }
 }
 

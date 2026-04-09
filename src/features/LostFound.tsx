@@ -92,6 +92,13 @@ export default function LostFound() {
       return;
     }
 
+    // Guard: if session expired since modal opened, show auth again
+    if (!user || !token) {
+      setIsModalOpen(false);
+      setShowAuth(true);
+      return;
+    }
+
     setIsUploading(true);
     try {
       let cloudinaryUrl = undefined;
