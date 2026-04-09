@@ -55,19 +55,32 @@ if not SECRET_KEY:
 if not ADMIN_PASSWORD:
     raise RuntimeError("ADMIN_PASSWORD environment variable is not set!")
 
-# ==========================================
-# 🔐 JWT AUTH DECORATOR
-# ==========================================
+import base64 as _base64
+
+def _get_supabase_signing_bytes(secret: str) -> list:
+    """
+    Supabase signs JWTs using its JWT secret as raw bytes.
+    The secret shown in the Supabase dashboard is the raw string.
+    Try both raw string AND base64url-decoded bytes, to cover both cases.
+    """
+    candidates = [secret]  # try raw string first
+    try:
+        # Add padding if needed and try base64url decode
+        padded = secret + '=' * (-len(secret) % 4)
+        decoded = _base64.urlsafe_b64decode(padded)
+        candidates.append(decoded)
+    except Exception:
+        pass
+    return candidates
+
 def decode_token(token: str):
     """
-    Try decoding the JWT with Supabase's JWT secret first (for tokens issued
-    directly by Supabase after OTP login), then fall back to the app's own
-    SECRET_KEY (for tokens issued by auth_service.py).
-    Raises jwt.InvalidTokenError if neither secret works.
+    Try decoding with all possible Supabase secret forms first,
+    then fall back to the app's own SECRET_KEY.
     """
     secrets_to_try = []
     if SUPABASE_JWT_SECRET:
-        secrets_to_try.append(SUPABASE_JWT_SECRET)
+        secrets_to_try.extend(_get_supabase_signing_bytes(SUPABASE_JWT_SECRET))
     secrets_to_try.append(SECRET_KEY)
 
     last_exc = None

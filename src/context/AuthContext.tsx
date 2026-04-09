@@ -1,4 +1,5 @@
 import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import { supabase } from '../lib/supabase';
 
 export interface AuthUser {
   user_id: string;
@@ -20,19 +21,15 @@ const AuthContext = createContext<AuthContextType>({
   isLoading: true,
 });
 
-/** Decode JWT payload without verifying signature (client-side only) */
+/** Decode JWT payload without verifying signature (client-side display only) */
 function decodeJwt(token: string): AuthUser | null {
   try {
     const payload = JSON.parse(atob(token.split('.')[1]));
-    // Check expiry
     if (payload.exp * 1000 < Date.now()) return null;
-    
-    // Support natively decoded Supabase JWTs:
-    // User ID is in 'sub', anon_name is inside 'user_metadata'
-    return { 
-      user_id: payload.sub || payload.user_id, 
-      email: payload.email, 
-      anon_name: payload.user_metadata?.anon_name || payload.anon_name || "MithyaUser"
+    return {
+      user_id: payload.sub || payload.user_id,
+      email: payload.email || '',
+      anon_name: payload.user_metadata?.anon_name || payload.anon_name || 'MithyaUser'
     };
   } catch {
     return null;
@@ -45,19 +42,56 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    const stored = localStorage.getItem('mithya_token');
-    if (stored) {
-      const decoded = decodeJwt(stored);
-      if (decoded) {
-        setToken(stored);
-        setUser(decoded);
-      } else {
-        localStorage.removeItem('mithya_token');
+    // ✅ PRIMARY: Subscribe to Supabase session — auto-refreshes tokens silently
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      (_event, session) => {
+        if (session?.access_token) {
+          const decoded = decodeJwt(session.access_token);
+          if (decoded) {
+            setToken(session.access_token);
+            setUser(decoded);
+            // Keep localStorage in sync for backwards compat
+            localStorage.setItem('mithya_token', session.access_token);
+          }
+        } else {
+          // Session ended or logged out
+          setToken(null);
+          setUser(null);
+          localStorage.removeItem('mithya_token');
+        }
+        setIsLoading(false);
       }
-    }
-    setIsLoading(false);
+    );
+
+    // ✅ FALLBACK: check for existing session on mount
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (session?.access_token) {
+        const decoded = decodeJwt(session.access_token);
+        if (decoded) {
+          setToken(session.access_token);
+          setUser(decoded);
+          localStorage.setItem('mithya_token', session.access_token);
+        }
+      } else {
+        // Try legacy stored token (auth_service.py flow)
+        const stored = localStorage.getItem('mithya_token');
+        if (stored) {
+          const decoded = decodeJwt(stored);
+          if (decoded) {
+            setToken(stored);
+            setUser(decoded);
+          } else {
+            localStorage.removeItem('mithya_token');
+          }
+        }
+      }
+      setIsLoading(false);
+    });
+
+    return () => subscription.unsubscribe();
   }, []);
 
+  /** Called after OTP verify — Supabase session is already set, just sync state */
   const login = (newToken: string) => {
     const decoded = decodeJwt(newToken);
     if (decoded) {
@@ -67,7 +101,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   };
 
-  const logout = () => {
+  const logout = async () => {
+    await supabase.auth.signOut();
     localStorage.removeItem('mithya_token');
     setToken(null);
     setUser(null);
