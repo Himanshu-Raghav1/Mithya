@@ -1,7 +1,7 @@
 from flask import Flask, jsonify, request
 from flask_cors import CORS
 from pymongo import MongoClient
-import uuid, os, jwt
+import uuid, os, jwt, requests as http_requests
 from functools import wraps
 from datetime import datetime, timezone, timedelta
 
@@ -55,65 +55,97 @@ if not SECRET_KEY:
 if not ADMIN_PASSWORD:
     raise RuntimeError("ADMIN_PASSWORD environment variable is not set!")
 
+# ==========================================
+# 🔐 AUTH CONFIG
+# ==========================================
+SUPABASE_URL     = os.environ.get("SUPABASE_URL", "")      # e.g. https://xxx.supabase.co
+SUPABASE_ANON_KEY = os.environ.get("SUPABASE_ANON_KEY", "")  # public anon key
+
 import base64 as _base64
 
-def _get_supabase_signing_bytes(secret: str) -> list:
+# ────────────────────────────────────────────────────────────────
+# Supabase REST user-info lookup (primary — works without JWT secret)
+# ────────────────────────────────────────────────────────────────
+def _validate_via_supabase(token: str) -> dict | None:
     """
-    Supabase signs JWTs using its JWT secret as raw bytes.
-    The secret shown in the Supabase dashboard is the raw string.
-    Try both raw string AND base64url-decoded bytes, to cover both cases.
+    Ask Supabase /auth/v1/user if the token is valid.
+    Returns user dict on success, None on any failure.
+    Requires SUPABASE_URL and SUPABASE_ANON_KEY env vars.
     """
-    candidates = [secret]  # try raw string first
+    if not SUPABASE_URL or not SUPABASE_ANON_KEY:
+        return None
     try:
-        # Add padding if needed and try base64url decode
-        padded = secret + '=' * (-len(secret) % 4)
-        decoded = _base64.urlsafe_b64decode(padded)
-        candidates.append(decoded)
+        res = http_requests.get(
+            f"{SUPABASE_URL}/auth/v1/user",
+            headers={
+                "Authorization": f"Bearer {token}",
+                "apikey": SUPABASE_ANON_KEY,
+            },
+            timeout=8,
+        )
+        if res.status_code == 200:
+            return res.json()  # Supabase user object
     except Exception:
         pass
-    return candidates
+    return None
 
-def decode_token(token: str):
-    """
-    Try decoding with all possible Supabase secret forms first,
-    then fall back to the app's own SECRET_KEY.
-    """
-    secrets_to_try = []
-    if SUPABASE_JWT_SECRET:
-        secrets_to_try.extend(_get_supabase_signing_bytes(SUPABASE_JWT_SECRET))
-    secrets_to_try.append(SECRET_KEY)
-
-    last_exc = None
-    for secret in secrets_to_try:
+# ────────────────────────────────────────────────────────────────
+# Local JWT decode fallback (for auth_service.py issued tokens)
+# ────────────────────────────────────────────────────────────────
+def _decode_local(token: str) -> dict | None:
+    secrets = [SECRET_KEY]
+    supabase_secret = os.environ.get("SUPABASE_JWT_SECRET", "")
+    if supabase_secret:
+        secrets.insert(0, supabase_secret)
+        try:
+            padded = supabase_secret + '=' * (-len(supabase_secret) % 4)
+            secrets.insert(1, _base64.urlsafe_b64decode(padded))
+        except Exception:
+            pass
+    for secret in secrets:
         try:
             return jwt.decode(token, secret, algorithms=["HS256"], options={"verify_aud": False})
         except jwt.ExpiredSignatureError:
-            raise  # Expired is definitive — no need to try other secrets
-        except jwt.InvalidTokenError as e:
-            last_exc = e
-    raise last_exc
+            raise
+        except jwt.InvalidTokenError:
+            continue
+    return None
 
 def require_auth(f):
     @wraps(f)
     def decorated(*args, **kwargs):
-        token = request.headers.get('Authorization', '').replace('Bearer ', '')
+        token = request.headers.get('Authorization', '').replace('Bearer ', '').strip()
         if not token:
             return jsonify({"success": False, "message": "Login required to do this 🔒"}), 401
+
+        # 1️⃣ Ask Supabase REST API — most reliable, no JWT secret needed
+        sb_user = _validate_via_supabase(token)
+        if sb_user:
+            user_meta = sb_user.get('user_metadata', {})
+            request.auth_user = {
+                "user_id":  sb_user.get('id') or sb_user.get('sub'),
+                "email":    sb_user.get('email', ''),
+                "anon_name": user_meta.get('anon_name') or "MithyaUser",
+            }
+            return f(*args, **kwargs)
+
+        # 2️⃣ Fallback: decode locally (covers auth_service.py / old tokens)
         try:
-            payload = decode_token(token)
-
-            # Map both Supabase JWT structure and custom JWT structure
-            user_id = payload.get('sub') or payload.get('user_id')
-            user_meta = payload.get('user_metadata', {})
-            anon_name = user_meta.get('anon_name') or payload.get('anon_name') or "MithyaUser"
-            email = payload.get('email') or user_meta.get('email') or ""
-
-            request.auth_user = {"user_id": user_id, "email": email, "anon_name": anon_name}
+            payload = _decode_local(token)
+            if payload:
+                user_meta = payload.get('user_metadata', {})
+                request.auth_user = {
+                    "user_id":  payload.get('sub') or payload.get('user_id'),
+                    "email":    payload.get('email') or user_meta.get('email', ''),
+                    "anon_name": user_meta.get('anon_name') or payload.get('anon_name') or "MithyaUser",
+                }
+                return f(*args, **kwargs)
         except jwt.ExpiredSignatureError:
             return jsonify({"success": False, "message": "Session expired, please log in again"}), 401
-        except jwt.InvalidTokenError:
-            return jsonify({"success": False, "message": "Invalid token"}), 401
-        return f(*args, **kwargs)
+        except Exception:
+            pass
+
+        return jsonify({"success": False, "message": "Login required 🔒"}), 401
     return decorated
 
 def require_admin(f):
