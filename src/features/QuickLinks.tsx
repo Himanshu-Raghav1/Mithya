@@ -37,6 +37,13 @@ export default function QuickLinks() {
       icon: <LinkIcon className="w-6 h-6 text-white" />,
       url: "https://mitwpu.edu.in/faculty-members",
       color: ["#7B1FA2", "#4A148C"]
+    },
+    {
+      title: "End Term Time Table",
+      desc: "Exam Timetable",
+      icon: <FileText className="w-6 h-6 text-white" />,
+      url: "https://mitwpu.edu.in/academics/exam-timetable",
+      color: ["#1E88E5", "#1565C0"]
     }
   ];
 
