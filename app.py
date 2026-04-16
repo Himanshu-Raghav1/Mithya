@@ -207,8 +207,9 @@ def get_posts():
         if auth_header.startswith('Bearer '):
             try:
                 token = auth_header.replace('Bearer ', '')
-                payload = decode_token(token)
-                current_user_id = payload.get('sub') or payload.get('user_id')
+                payload = _decode_local(token)
+                if payload:
+                    current_user_id = payload.get('sub') or payload.get('user_id')
             except Exception:
                 pass
 
@@ -321,8 +322,9 @@ def interact_post(post_id, action):
         if auth_header.startswith('Bearer '):
             try:
                 token = auth_header.replace('Bearer ', '')
-                payload = decode_token(token)
-                user_id = payload.get('sub') or payload.get('user_id')
+                payload = _decode_local(token)
+                if payload:
+                    user_id = payload.get('sub') or payload.get('user_id')
             except Exception:
                 pass
         if not user_id:
