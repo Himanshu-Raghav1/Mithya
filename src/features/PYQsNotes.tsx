@@ -2,8 +2,62 @@ import { useState, useRef, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   BookOpen, Upload, Loader2, Link as LinkIcon, Download, Search, X,
-  Lock, Star, Share2, ExternalLink, Trophy, ChevronDown, ChevronUp, Send
+  Lock, Star, Share2, ExternalLink, Trophy, Send
 } from 'lucide-react';
+
+// ─── Star explosion particle animation ───────────────────────────────────────
+const starBurstStyle = `
+  @keyframes starPop {
+    0%   { transform: translate(-50%,-50%) scale(0) rotate(0deg);   opacity: 1; }
+    60%  { transform: translate(-50%,-50%) scale(1.4) rotate(120deg); opacity: 1; }
+    100% { transform: translate(-50%,-50%) scale(2) rotate(200deg);  opacity: 0; }
+  }
+  @keyframes starFly {
+    0%   { opacity: 1; transform: translate(0,0) scale(1); }
+    100% { opacity: 0; transform: translate(var(--tx), var(--ty)) scale(0.3); }
+  }
+  .star-particle {
+    pointer-events: none;
+    position: fixed;
+    width: 14px;
+    height: 14px;
+    z-index: 9999;
+    animation: starFly 0.65s ease-out forwards;
+  }
+  .star-give-btn {
+    position: relative;
+    overflow: visible !important;
+  }
+  .star-give-btn:active {
+    transform: scale(0.85);
+  }
+`;
+
+function spawnStars(e: React.MouseEvent | React.TouchEvent) {
+  const rect = ('touches' in e)
+    ? (e.target as HTMLElement).getBoundingClientRect()
+    : (e.target as HTMLElement).getBoundingClientRect();
+  const cx = rect.left + rect.width / 2;
+  const cy = rect.top + rect.height / 2;
+  const colors = ['#facc15','#fbbf24','#fde68a','#f59e0b','#fff'];
+  for (let i = 0; i < 10; i++) {
+    const el = document.createElement('div');
+    el.className = 'star-particle';
+    const angle = (i / 10) * 360;
+    const dist  = 30 + Math.random() * 45;
+    const tx = Math.cos((angle * Math.PI) / 180) * dist;
+    const ty = Math.sin((angle * Math.PI) / 180) * dist;
+    el.style.cssText = `
+      left:${cx}px; top:${cy}px;
+      background:${colors[i % colors.length]};
+      border-radius:50%;
+      --tx:${tx}px; --ty:${ty}px;
+      animation-delay:${i * 0.02}s;
+    `;
+    document.body.appendChild(el);
+    el.addEventListener('animationend', () => el.remove());
+  }
+}
 import {
   getPyqs, submitPyq, starNote,
   getLegendResources, submitLegendResource, starLegendResource
@@ -192,6 +246,7 @@ function NoteCard({ note, token, onStar }: { note: any; token: string | null; on
   const [showLog, setShowLog] = useState(false);
   const [starring, setStarring] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [justStarred, setJustStarred] = useState(false);
 
   const doStar = async (reason: string) => {
     if (!token) return;
@@ -200,6 +255,8 @@ function NoteCard({ note, token, onStar }: { note: any; token: string | null; on
     setStarring(false);
     if (res.success) {
       setShowModal(false);
+      setJustStarred(true);
+      setTimeout(() => setJustStarred(false), 700);
       onStar(note.id);
     } else {
       alert(res.message);
@@ -208,6 +265,7 @@ function NoteCard({ note, token, onStar }: { note: any; token: string | null; on
 
   return (
     <>
+      <style>{starBurstStyle}</style>
       <div className="glass-card p-5 border border-white/10 hover:border-yellow-400/40 transition-colors group flex flex-col">
         {/* Header */}
         <div className="flex justify-between items-start mb-3 gap-2">
@@ -244,9 +302,13 @@ function NoteCard({ note, token, onStar }: { note: any; token: string | null; on
             {/* Give star (auth only) */}
             {token && (
               <button
-                onClick={() => setShowModal(true)}
+                onClick={(e) => { spawnStars(e); setShowModal(true); }}
                 title="Give a Star"
-                className="p-1.5 rounded-lg bg-white/5 hover:bg-yellow-400/20 text-white/50 hover:text-yellow-300 transition-colors"
+                className={`star-give-btn p-1.5 rounded-lg transition-all duration-200 ${
+                  justStarred
+                    ? 'bg-yellow-400/30 text-yellow-300 scale-110'
+                    : 'bg-white/5 hover:bg-yellow-400/20 text-white/50 hover:text-yellow-300 hover:scale-110'
+                }`}
               >
                 <Star className="w-3.5 h-3.5" />
               </button>
@@ -299,6 +361,7 @@ function LegendCard({ resource, token, onStar }: { resource: any; token: string 
   const [showLog, setShowLog] = useState(false);
   const [starring, setStarring] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [justStarred, setJustStarred] = useState(false);
 
   const doStar = async (reason: string) => {
     if (!token) return;
@@ -307,6 +370,8 @@ function LegendCard({ resource, token, onStar }: { resource: any; token: string 
     setStarring(false);
     if (res.success) {
       setShowModal(false);
+      setJustStarred(true);
+      setTimeout(() => setJustStarred(false), 700);
       onStar(resource.id);
     } else {
       alert(res.message);
@@ -358,8 +423,15 @@ function LegendCard({ resource, token, onStar }: { resource: any; token: string 
             </button>
 
             {token && (
-              <button onClick={() => setShowModal(true)} title="Give a Star"
-                className="p-1.5 rounded-lg bg-white/5 hover:bg-amber-400/20 text-white/50 hover:text-amber-300 transition-colors">
+              <button
+                onClick={(e) => { spawnStars(e); setShowModal(true); }}
+                title="Give a Star"
+                className={`star-give-btn p-1.5 rounded-lg transition-all duration-200 ${
+                  justStarred
+                    ? 'bg-amber-400/30 text-amber-300 scale-110'
+                    : 'bg-white/5 hover:bg-amber-400/20 text-white/50 hover:text-amber-300 hover:scale-110'
+                }`}
+              >
                 <Star className="w-3.5 h-3.5" />
               </button>
             )}
@@ -483,7 +555,7 @@ export default function PYQsNotes() {
       if (selectedFile) finalUrl = await uploadToCloudinary(selectedFile);
       const res = await submitPyq({ title, subject, author, file_url: finalUrl, program: uploadProgram, semester: uploadSemester, category: uploadCategory }, token);
       if (res.success) {
-        alert('✅ Submitted! You'll receive an email once the admin reviews your note.');
+        alert("✅ Submitted! You'll receive an email once the admin reviews your note.");
         setTitle(''); setSubject(''); setAuthor(''); setLinkUrl(''); setSelectedFile(null);
         setActiveTab('feed');
       } else {
@@ -506,7 +578,7 @@ export default function PYQsNotes() {
         subject: lgSubject, description: lgDescription, program: lgProgram, semester: lgSemester
       }, token);
       if (res.success) {
-        alert('🏆 Legend Resource submitted! You'll be emailed once the admin reviews it.');
+        alert("🏆 Legend Resource submitted! You'll be emailed once the admin reviews it.");
         setLgTitle(''); setLgDriveLink(''); setLgLegendName(''); setLgSubject('');
         setLgDescription(''); setActiveTab('legend');
       } else {
