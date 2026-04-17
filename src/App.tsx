@@ -22,10 +22,10 @@ export default function App() {
   // Read ?tab= from URL so shared links deep-link to the right section
   const getInitialTab = (): TabId => {
     const params = new URLSearchParams(window.location.search);
-    const tab = params.get('tab') as TabId | null;
+    const tab = params.get('tab'); // string | null — intentionally not cast to TabId
     const validTabs: TabId[] = ['sports','voice','events','quicklinks','contacts','lostfound','pyqs','admin','personalized'];
     if (tab === 'legend' || tab === 'pyqs') return 'pyqs';
-    return (tab && validTabs.includes(tab)) ? tab : 'voice';
+    return (tab && validTabs.includes(tab as TabId)) ? (tab as TabId) : 'voice';
   };
 
   const [activeTab, setActiveTab] = useState<TabId>(getInitialTab);
