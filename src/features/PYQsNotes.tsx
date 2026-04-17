@@ -231,14 +231,29 @@ function StarsLogPanel({ starsLog, total, onClose }: StarsLogPanelProps) {
 }
 
 // ─── Share helper ─────────────────────────────────────────────────────────────
-async function handleShare(title: string, url: string, setCopied: (v: boolean) => void) {
+async function handleShare(
+  title: string,
+  id: string,
+  tab: 'pyqs' | 'legend',
+  setCopied: (v: boolean) => void
+) {
+  // Share the Mithya app link — NOT the raw file/Drive URL.
+  // Recipients must open Mithya and log in to access the resource.
+  const appUrl = `${window.location.origin}/?tab=${tab}&id=${id}`;
+  const shareText = `📚 Check out "${title}" on Mithya — login to access the full resource!`;
+
   if (navigator.share) {
-    try { await navigator.share({ title, url }); return; } catch { /* user cancelled */ }
+    try {
+      await navigator.share({ title: `📚 ${title}`, text: shareText, url: appUrl });
+      return;
+    } catch { /* user cancelled */ }
   }
-  await navigator.clipboard.writeText(url);
+  // Desktop fallback — copy app link + preview text to clipboard
+  await navigator.clipboard.writeText(`${shareText}\n${appUrl}`);
   setCopied(true);
-  setTimeout(() => setCopied(false), 2000);
+  setTimeout(() => setCopied(false), 2500);
 }
+
 
 // ─── Note Card ────────────────────────────────────────────────────────────────
 function NoteCard({ note, token, onStar }: { note: any; token: string | null; onStar: (id: string) => void }) {
@@ -314,11 +329,13 @@ function NoteCard({ note, token, onStar }: { note: any; token: string | null; on
               </button>
             )}
 
-            {/* Share */}
+            {/* Share — shares app link, not the raw file */}
             <button
-              onClick={() => handleShare(note.title, note.file_url, setCopied)}
-              title={copied ? 'Copied!' : 'Share'}
-              className={`p-1.5 rounded-lg transition-colors ${copied ? 'bg-green-500/20 text-green-400' : 'bg-white/5 hover:bg-white/10 text-white/50 hover:text-white'}`}
+              onClick={() => handleShare(note.title, note.id, 'pyqs', setCopied)}
+              title={copied ? 'Link Copied!' : 'Share (Login required to open)'}
+              className={`p-1.5 rounded-lg transition-all duration-200 hover:scale-110 ${
+                copied ? 'bg-green-500/20 text-green-400' : 'bg-white/5 hover:bg-white/10 text-white/50 hover:text-white'
+              }`}
             >
               <Share2 className="w-3.5 h-3.5" />
             </button>
@@ -436,10 +453,13 @@ function LegendCard({ resource, token, onStar }: { resource: any; token: string 
               </button>
             )}
 
+            {/* Share — shares app link, not the raw Drive link */}
             <button
-              onClick={() => handleShare(resource.title, resource.drive_link, setCopied)}
-              title={copied ? 'Copied!' : 'Share'}
-              className={`p-1.5 rounded-lg transition-colors ${copied ? 'bg-green-500/20 text-green-400' : 'bg-white/5 hover:bg-white/10 text-white/50 hover:text-white'}`}
+              onClick={() => handleShare(resource.title, resource.id, 'legend', setCopied)}
+              title={copied ? 'Link Copied!' : 'Share (Login required to open)'}
+              className={`p-1.5 rounded-lg transition-all duration-200 hover:scale-110 ${
+                copied ? 'bg-green-500/20 text-green-400' : 'bg-white/5 hover:bg-white/10 text-white/50 hover:text-white'
+              }`}
             >
               <Share2 className="w-3.5 h-3.5" />
             </button>
@@ -485,7 +505,7 @@ export default function PYQsNotes() {
   const [author, setAuthor] = useState('');
   const [linkUrl, setLinkUrl] = useState('');
   const [uploadProgram, setUploadProgram] = useState<ProgramType>('BTech');
-  const [uploadSemester, setUploadSemester] = useState('1');
+  const [uploadSemesters, setUploadSemesters] = useState<string[]>(['1']);
   const [uploadCategory, setUploadCategory] = useState('PYQs');
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [isUploading, setIsUploading] = useState(false);
@@ -498,7 +518,7 @@ export default function PYQsNotes() {
   const [lgSubject, setLgSubject] = useState('');
   const [lgDescription, setLgDescription] = useState('');
   const [lgProgram, setLgProgram] = useState<ProgramType>('BTech');
-  const [lgSemester, setLgSemester] = useState('1');
+  const [lgSemesters, setLgSemesters] = useState<string[]>(['1']);
   const [isLegendUploading, setIsLegendUploading] = useState(false);
   const [uploadSubTab, setUploadSubTab] = useState<'note' | 'legend'>('note');
 
@@ -553,10 +573,10 @@ export default function PYQsNotes() {
     let finalUrl = linkUrl;
     try {
       if (selectedFile) finalUrl = await uploadToCloudinary(selectedFile);
-      const res = await submitPyq({ title, subject, author, file_url: finalUrl, program: uploadProgram, semester: uploadSemester, category: uploadCategory }, token);
+      const res = await submitPyq({ title, subject, author, file_url: finalUrl, program: uploadProgram, semester: uploadSemesters.join(', '), category: uploadCategory }, token);
       if (res.success) {
         alert("✅ Submitted! You'll receive an email once the admin reviews your note.");
-        setTitle(''); setSubject(''); setAuthor(''); setLinkUrl(''); setSelectedFile(null);
+        setTitle(''); setSubject(''); setAuthor(''); setLinkUrl(''); setSelectedFile(null); setUploadSemesters(['1']);
         setActiveTab('feed');
       } else {
         alert('Error: ' + res.message);
@@ -575,12 +595,12 @@ export default function PYQsNotes() {
     try {
       const res = await submitLegendResource({
         title: lgTitle, drive_link: lgDriveLink, legend_name: lgLegendName,
-        subject: lgSubject, description: lgDescription, program: lgProgram, semester: lgSemester
+        subject: lgSubject, description: lgDescription, program: lgProgram, semester: lgSemesters.join(', ')
       }, token);
       if (res.success) {
         alert("🏆 Legend Resource submitted! You'll be emailed once the admin reviews it.");
         setLgTitle(''); setLgDriveLink(''); setLgLegendName(''); setLgSubject('');
-        setLgDescription(''); setActiveTab('legend');
+        setLgDescription(''); setLgSemesters(['1']); setActiveTab('legend');
       } else {
         alert('Error: ' + res.message);
       }
@@ -809,12 +829,28 @@ export default function PYQsNotes() {
                       {PROGRAMS.map(p => <option key={p} value={p}>{p}</option>)}
                     </select>
                   </div>
-                  <div>
-                    <label className="text-xs font-bold text-purple-300 ml-1">Semester *</label>
-                    <select value={uploadSemester} onChange={e => setUploadSemester(e.target.value)}
-                      className="w-full mt-1 bg-black/30 border border-white/10 rounded-xl px-4 py-3 text-white outline-none focus:border-purple-400 cursor-pointer">
-                      {SEMESTERS.map(s => <option key={s} value={s}>Semester {s}</option>)}
-                    </select>
+                  <div className="sm:col-span-2">
+                    <label className="text-xs font-bold text-purple-300 ml-1">Semesters * <span className="font-normal text-white/30">(select all that apply)</span></label>
+                    <div className="flex flex-wrap gap-2 mt-2">
+                      {SEMESTERS.map(s => {
+                        const checked = uploadSemesters.includes(s);
+                        return (
+                          <button
+                            key={s} type="button"
+                            onClick={() => setUploadSemesters(prev =>
+                              checked ? prev.filter(x => x !== s) : [...prev, s]
+                            )}
+                            className={`px-3 py-1.5 rounded-xl text-xs font-black border transition-all ${
+                              checked
+                                ? 'bg-purple-500/30 text-purple-200 border-purple-400/60 scale-105'
+                                : 'bg-white/5 text-white/40 border-white/10 hover:border-purple-400/30 hover:text-white/70'
+                            }`}
+                          >
+                            Sem {s}
+                          </button>
+                        );
+                      })}
+                    </div>
                   </div>
                   <div>
                     <label className="text-xs font-bold text-green-300 ml-1">Category *</label>
@@ -921,12 +957,28 @@ export default function PYQsNotes() {
                       {PROGRAMS.map(p => <option key={p} value={p}>{p}</option>)}
                     </select>
                   </div>
-                  <div>
-                    <label className="text-xs font-bold text-purple-300 ml-1">Semester</label>
-                    <select value={lgSemester} onChange={e => setLgSemester(e.target.value)}
-                      className="w-full mt-1 bg-black/30 border border-white/10 rounded-xl px-4 py-3 text-white outline-none focus:border-amber-400 cursor-pointer">
-                      {SEMESTERS.map(s => <option key={s} value={s}>Semester {s}</option>)}
-                    </select>
+                  <div className="sm:col-span-2">
+                    <label className="text-xs font-bold text-purple-300 ml-1">Semesters <span className="font-normal text-white/30">(select all that apply)</span></label>
+                    <div className="flex flex-wrap gap-2 mt-2">
+                      {SEMESTERS.map(s => {
+                        const checked = lgSemesters.includes(s);
+                        return (
+                          <button
+                            key={s} type="button"
+                            onClick={() => setLgSemesters(prev =>
+                              checked ? prev.filter(x => x !== s) : [...prev, s]
+                            )}
+                            className={`px-3 py-1.5 rounded-xl text-xs font-black border transition-all ${
+                              checked
+                                ? 'bg-purple-500/30 text-purple-200 border-purple-400/60 scale-105'
+                                : 'bg-white/5 text-white/40 border-white/10 hover:border-purple-400/30 hover:text-white/70'
+                            }`}
+                          >
+                            Sem {s}
+                          </button>
+                        );
+                      })}
+                    </div>
                   </div>
                   <div className="sm:col-span-2">
                     <label className="text-xs font-bold text-white/60 ml-1">Description (Optional)</label>

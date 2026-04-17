@@ -3,14 +3,15 @@ import { motion, AnimatePresence } from 'framer-motion';
 import {
   ShieldCheck, LogOut, CheckCircle2, XCircle, Trash2, Plus, 
   Loader2, Link as LinkIcon, GlobeLock, Book, MessageSquare, 
-  Phone, Calendar, MapPin, Upload, Search
+  Phone, Calendar, MapPin, Upload, Search, Trophy
 } from 'lucide-react';
 import { 
   verifyAdmin, getPendingPyqs, moderatePyq, 
   getForumPosts, deleteVoicePost, deleteVoiceComment,
   getContacts, createContact, deleteContact,
   getEvents, deleteEvent, getPinboard, createPin, deletePin,
-  getLostFoundItems, getLostFoundStats, adminResolveLostFoundItem
+  getLostFoundItems, getLostFoundStats, adminResolveLostFoundItem,
+  getPendingLegend, moderateLegend
 } from '../services/api';
 import { uploadToCloudinary } from '../services/cloudinary';
 import type { ContactCategory, ForumPost, Contact, EventItem, PinItem } from '../types';
@@ -21,7 +22,11 @@ export default function AdminPortal() {
   const [password, setPassword] = useState('');
   const [authLoading, setAuthLoading] = useState(false);
   
-  const [activeTab, setActiveTab] = useState<'pyqs' | 'voice' | 'contacts' | 'events' | 'pinboard' | 'lostfound'>('pyqs');
+  const [activeTab, setActiveTab] = useState<'pyqs' | 'legend' | 'voice' | 'contacts' | 'events' | 'pinboard' | 'lostfound'>('pyqs');
+
+  // Legend Resources
+  const [pendingLegend, setPendingLegend] = useState<any[]>([]);
+  const [loadingLegend, setLoadingLegend] = useState(false);
 
   // Lost & Found
   const [lfItems, setLfItems] = useState<any[]>([]);
@@ -80,6 +85,14 @@ export default function AdminPortal() {
     setLoadingPyqs(false);
   };
 
+  const loadLegend = async () => {
+    setLoadingLegend(true);
+    const token = sessionStorage.getItem('admin_token') || '';
+    const res = await getPendingLegend(token);
+    if (res.success && res.data) setPendingLegend(res.data);
+    setLoadingLegend(false);
+  };
+
   const loadVoice = async () => {
     setLoadingVoice(true);
     const res = await getForumPosts();
@@ -122,12 +135,23 @@ export default function AdminPortal() {
   useEffect(() => {
     if (!isAuthenticated) return;
     if (activeTab === 'pyqs') loadPyqs();
+    if (activeTab === 'legend') loadLegend();
     if (activeTab === 'voice') loadVoice();
     if (activeTab === 'contacts') loadContacts();
     if (activeTab === 'events') loadEvents();
     if (activeTab === 'pinboard') loadPins();
     if (activeTab === 'lostfound') loadLostFound();
   }, [activeTab, isAuthenticated]);
+
+  const handleModerateLegend = async (id: string, action: 'approve' | 'reject') => {
+    const token = sessionStorage.getItem('admin_token') || '';
+    const res = await moderateLegend(id, action, token);
+    if (res.success) {
+      setPendingLegend(prev => prev.filter(r => r.id !== id));
+    } else {
+      alert('Error: ' + res.message);
+    }
+  };
 
   const handleModeratePyq = async (id: string, action: 'approve' | 'reject') => {
     const token = sessionStorage.getItem('admin_token') || '';
@@ -272,6 +296,10 @@ export default function AdminPortal() {
           <Book className="w-4 h-4" /> PYQs Approvals
           {pendingNotes.length > 0 && <span className="bg-red-500 text-white text-[10px] px-1.5 py-0.5 rounded-full">{pendingNotes.length}</span>}
         </button>
+        <button onClick={() => setActiveTab('legend')} className={`flex items-center gap-2 px-4 py-2.5 rounded-xl font-bold transition-colors flex-shrink-0 ${activeTab === 'legend' ? 'bg-amber-500 text-black' : 'bg-white/5 text-white/60 hover:text-white hover:bg-white/10'}`}>
+          <Trophy className="w-4 h-4" /> Legend Resources
+          {pendingLegend.length > 0 && <span className="bg-red-500 text-white text-[10px] px-1.5 py-0.5 rounded-full">{pendingLegend.length}</span>}
+        </button>
         <button onClick={() => setActiveTab('voice')} className={`flex items-center gap-2 px-4 py-2.5 rounded-xl font-bold transition-colors flex-shrink-0 ${activeTab === 'voice' ? 'bg-blue-500 text-white' : 'bg-white/5 text-white/60 hover:text-white hover:bg-white/10'}`}>
           <MessageSquare className="w-4 h-4" /> MITVoice Moderation
         </button>
@@ -303,12 +331,43 @@ export default function AdminPortal() {
                 <div className="flex-1 text-center sm:text-left">
                   <span className="text-xs font-black text-blue-300 uppercase">{note.subject}</span>
                   <h4 className="text-white font-bold leading-tight my-1">{note.title}</h4>
-                  <p className="text-xs text-white/50 mb-2">By: {note.author}</p>
+                  <p className="text-xs text-white/50 mb-1">By: {note.author} · {note.program} Sem {note.semester} · {note.category}</p>
+                  <p className="text-xs text-white/30 mb-2">Submitter: {note.submitter_email}</p>
                   <a href={note.file_url} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 text-yellow-400 text-sm hover:underline"><LinkIcon className="w-3.5 h-3.5"/> Inspect File / Link</a>
                 </div>
                 <div className="flex gap-2">
                   <button onClick={() => handleModeratePyq(note.id, 'approve')} className="px-4 py-2 bg-green-500/20 text-green-400 hover:bg-green-500/40 rounded-xl text-sm font-bold transition-colors flex items-center gap-1.5"><CheckCircle2 className="w-4 h-4"/> Approve</button>
-                  <button onClick={() => handleModeratePyq(note.id, 'reject')} className="px-4 py-2 bg-red-500/20 text-red-400 hover:bg-red-500/40 rounded-xl text-sm font-bold transition-colors flex items-center gap-1.5"><XCircle className="w-4 h-4"/> Reject/Delete</button>
+                  <button onClick={() => handleModeratePyq(note.id, 'reject')} className="px-4 py-2 bg-red-500/20 text-red-400 hover:bg-red-500/40 rounded-xl text-sm font-bold transition-colors flex items-center gap-1.5"><XCircle className="w-4 h-4"/> Reject</button>
+                </div>
+              </div>
+            ))}
+          </motion.div>
+        )}
+
+        {/* PANEL: LEGEND RESOURCES */}
+        {activeTab === 'legend' && (
+          <motion.div key="legend" initial={{opacity:0, y:10}} animate={{opacity:1, y:0}} exit={{opacity:0}} className="space-y-3">
+            {loadingLegend ? <p className="text-white/50 text-center py-8">Loading legend submissions...</p> : pendingLegend.length === 0 ? (
+              <div className="glass-card p-12 text-center border border-amber-500/20" style={{background:'rgba(245,158,11,0.05)'}}>
+                <Trophy className="w-12 h-12 text-amber-400 mx-auto mb-3" />
+                <p className="text-white/60 font-bold">No pending Legend Resources. All clear!</p>
+              </div>
+            ) : pendingLegend.map(resource => (
+              <div key={resource.id} className="glass-card p-4 border flex flex-col sm:flex-row gap-4 items-start justify-between" style={{borderColor:'rgba(245,158,11,0.3)', background:'rgba(245,158,11,0.06)'}}>
+                <div className="flex-1">
+                  <div className="flex items-center gap-2 mb-1">
+                    <Trophy className="w-4 h-4 text-amber-400" />
+                    <span className="text-xs font-black text-amber-400 uppercase tracking-wider">Legend Resource</span>
+                  </div>
+                  <h4 className="text-white font-black text-base leading-tight mb-1">{resource.title}</h4>
+                  <p className="text-xs text-white/50 mb-1">Legend: <span className="text-amber-300 font-bold">{resource.legend_name}</span> · {resource.subject} · {resource.program} Sem {resource.semester}</p>
+                  {resource.description && <p className="text-xs text-white/40 mb-2 italic">{resource.description}</p>}
+                  <p className="text-xs text-white/30 mb-2">Submitted by: {resource.submitter_email}</p>
+                  <a href={resource.drive_link} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 text-amber-400 text-sm hover:underline"><LinkIcon className="w-3.5 h-3.5"/> Inspect Drive Link</a>
+                </div>
+                <div className="flex gap-2 flex-shrink-0">
+                  <button onClick={() => handleModerateLegend(resource.id, 'approve')} className="px-4 py-2 bg-green-500/20 text-green-400 hover:bg-green-500/40 rounded-xl text-sm font-bold transition-colors flex items-center gap-1.5"><CheckCircle2 className="w-4 h-4"/> Approve</button>
+                  <button onClick={() => handleModerateLegend(resource.id, 'reject')} className="px-4 py-2 bg-red-500/20 text-red-400 hover:bg-red-500/40 rounded-xl text-sm font-bold transition-colors flex items-center gap-1.5"><XCircle className="w-4 h-4"/> Reject</button>
                 </div>
               </div>
             ))}

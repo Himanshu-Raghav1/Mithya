@@ -19,8 +19,20 @@ import QRGenerator from './features/QRGenerator';
 import type { TabId } from './types';
 
 export default function App() {
-  const [showWelcome, setShowWelcome] = useState(true);
-  const [activeTab, setActiveTab] = useState<TabId>('voice');
+  // Read ?tab= from URL so shared links deep-link to the right section
+  const getInitialTab = (): TabId => {
+    const params = new URLSearchParams(window.location.search);
+    const tab = params.get('tab') as TabId | null;
+    const validTabs: TabId[] = ['sports','voice','events','quicklinks','contacts','lostfound','pyqs','admin','personalized'];
+    if (tab === 'legend' || tab === 'pyqs') return 'pyqs';
+    return (tab && validTabs.includes(tab)) ? tab : 'voice';
+  };
+
+  const [activeTab, setActiveTab] = useState<TabId>(getInitialTab);
+
+  // Skip welcome screen if opened via a shared link (?tab= present)
+  const hasDeepLink = new URLSearchParams(window.location.search).has('tab');
+  const [showWelcome, setShowWelcome] = useState(!hasDeepLink);
 
   // MITVoice state is now managed directly by MITVoice.tsx via backend API
 
@@ -55,6 +67,7 @@ export default function App() {
       {/* Main App Shell */}
       <AnimatePresence>
         {!showWelcome && (
+
           <motion.div
             key="app-shell"
             initial={{ opacity: 0 }}
