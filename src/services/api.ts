@@ -291,16 +291,90 @@ export async function getPyqs(
   }
 }
 
-export async function submitPyq(payload: any): Promise<ApiResponse<any>> {
+export async function submitPyq(payload: any, token: string): Promise<ApiResponse<any>> {
   try {
     const res = await fetch(`${API_BASE_URL}/api/pyqs`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`,
+      },
       body: JSON.stringify(payload)
     });
     return await res.json() as ApiResponse<any>;
   } catch {
     return { success: false, message: 'Failed to submit note' };
+  }
+}
+
+export async function starNote(noteId: string, reason: string, token: string): Promise<ApiResponse<any>> {
+  try {
+    const res = await fetch(`${API_BASE_URL}/api/pyqs/${noteId}/star`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+      body: JSON.stringify({ reason })
+    });
+    return await res.json() as ApiResponse<any>;
+  } catch {
+    return { success: false, message: 'Failed to give star' };
+  }
+}
+
+export async function getLegendResources(): Promise<ApiResponse<any[]>> {
+  try {
+    const res = await fetch(`${API_BASE_URL}/api/legend`);
+    return await res.json() as ApiResponse<any[]>;
+  } catch {
+    return { success: false, message: 'Failed to fetch legend resources' };
+  }
+}
+
+export async function submitLegendResource(payload: any, token: string): Promise<ApiResponse<any>> {
+  try {
+    const res = await fetch(`${API_BASE_URL}/api/legend`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+      body: JSON.stringify(payload)
+    });
+    return await res.json() as ApiResponse<any>;
+  } catch {
+    return { success: false, message: 'Failed to submit legend resource' };
+  }
+}
+
+export async function starLegendResource(resourceId: string, reason: string, token: string): Promise<ApiResponse<any>> {
+  try {
+    const res = await fetch(`${API_BASE_URL}/api/legend/${resourceId}/star`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+      body: JSON.stringify({ reason })
+    });
+    return await res.json() as ApiResponse<any>;
+  } catch {
+    return { success: false, message: 'Failed to give star' };
+  }
+}
+
+export async function getPendingLegend(token: string): Promise<ApiResponse<any[]>> {
+  try {
+    const res = await fetch(`${API_BASE_URL}/api/admin/pending_legend`, {
+      headers: { 'Authorization': `Bearer ${token}` }
+    });
+    return await res.json() as ApiResponse<any[]>;
+  } catch {
+    return { success: false, message: 'Failed to fetch pending legend resources' };
+  }
+}
+
+export async function moderateLegend(resourceId: string, action: 'approve' | 'reject', token: string): Promise<ApiResponse<any>> {
+  try {
+    const res = await fetch(`${API_BASE_URL}/api/admin/legend/${resourceId}/${action}`, {
+      method: 'PUT',
+      headers: { 'Authorization': `Bearer ${token}` }
+    });
+    return await res.json() as ApiResponse<any>;
+  } catch {
+    return { success: false, message: `Failed to ${action} legend resource` };
   }
 }
 

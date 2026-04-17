@@ -1,7 +1,7 @@
 from flask import Flask, jsonify, request
 from flask_cors import CORS
 from pymongo import MongoClient
-import uuid, os, jwt, requests as http_requests
+import uuid, os, jwt, requests as http_requests, resend
 from functools import wraps
 from datetime import datetime, timezone, timedelta
 
@@ -27,6 +27,7 @@ voice_collection = db['mithya_voice']
 lost_found_collection = db['lost_and_found']
 events_collection = db['mithya_events']
 pyqs_collection = db['pyqs_notes']
+legend_collection = db['legend_resources']
 pinboard_collection = db['mithya_pinboard']
 contacts_collection = db['important_contacts']
 users_collection    = db['mithya_users']
@@ -37,6 +38,7 @@ voice_collection.create_index([("timestamp", -1)])
 lost_found_collection.create_index([("timestamp", -1)])
 events_collection.create_index([("date", 1)])
 pyqs_collection.create_index([("timestamp", -1)])
+legend_collection.create_index([("timestamp", -1)])
 pinboard_collection.create_index([("timestamp", -1)])
 private_deadlines_collection = db['private_deadlines']
 private_deadlines_collection.create_index([("date", 1)])
@@ -46,14 +48,38 @@ user_storage_collection = db['user_storage']
 private_deadlines_collection = db['private_deadlines']
 ur_money_collection = db['ur_money']
 
-ADMIN_PASSWORD     = os.environ.get("ADMIN_PASSWORD") or ""
-SECRET_KEY         = os.environ.get("SECRET_KEY") or ""
+ADMIN_PASSWORD      = os.environ.get("ADMIN_PASSWORD") or ""
+SECRET_KEY          = os.environ.get("SECRET_KEY") or ""
 SUPABASE_JWT_SECRET = os.environ.get("SUPABASE_JWT_SECRET") or ""
+RESEND_API_KEY      = os.environ.get("RESEND_API_KEY") or ""
+ADMIN_EMAIL         = "raghavhimu@gmail.com"
+SENDER_EMAIL        = "team@mithya.social"
 
 if not SECRET_KEY:
     raise RuntimeError("SECRET_KEY environment variable is not set!")
 if not ADMIN_PASSWORD:
     raise RuntimeError("ADMIN_PASSWORD environment variable is not set!")
+
+# ==========================================
+# 📧 RESEND EMAIL HELPER
+# ==========================================
+def send_email(to: str, subject: str, html: str):
+    """
+    Fire-and-forget email via Resend using team@mithya.social.
+    Silently fails — email failure must NEVER break the main API flow.
+    """
+    try:
+        if not RESEND_API_KEY or not to:
+            return
+        resend.api_key = RESEND_API_KEY
+        resend.Emails.send({
+            "from": f"Mithya <{SENDER_EMAIL}>",
+            "to": [to],
+            "subject": subject,
+            "html": html,
+        })
+    except Exception:
+        pass  # Never crash the route for email failure
 
 # ==========================================
 # 🔐 AUTH CONFIG
@@ -547,32 +573,88 @@ def get_pyqs():
         return jsonify({"success": False, "message": str(e)})
 
 @app.route('/api/pyqs', methods=['POST'])
+@require_auth
 def submit_pyq():
     try:
         data = request.json
         if not data or not data.get('title') or not data.get('subject'):
             return jsonify({"success": False, "message": "Missing title or subject"}), 400
-            
+
+        submitter_email = request.auth_user.get('email', '')
+        author_name     = data.get('author', '').strip() or request.auth_user.get('anon_name', 'Anonymous Student')
+
         new_note = {
             "id": str(uuid.uuid4()),
             "title": data.get('title').strip(),
             "subject": data.get('subject').strip(),
-            "author": data.get('author', 'Anonymous Student').strip(),
+            "author": author_name,
+            "submitter_email": submitter_email,
             "file_url": data.get('file_url', '').strip(),
             "program": data.get('program', 'BTech').strip(),
             "semester": data.get('semester', '1').strip(),
-            "category": data.get('category', 'notes').strip(),
+            "category": data.get('category', 'PYQs').strip(),
             "is_approved": False,
+            "stars": 0,
+            "stars_log": [],
             "timestamp": utcnow()
         }
-        
+
         pyqs_collection.insert_one(new_note)
         new_note.pop('_id', None)
+
+        # Notify admin
+        send_email(
+            ADMIN_EMAIL,
+            f"[Mithya] New Note Pending Approval: {new_note['title']}",
+            f"""<div style="font-family:sans-serif;max-width:480px">
+              <h2 style="color:#f59e0b">📚 New Note Submission</h2>
+              <p><b>{author_name}</b> submitted a note for approval:</p>
+              <table style="border-collapse:collapse;width:100%">
+                <tr><td style="padding:6px;color:#888">Title</td><td style="padding:6px"><b>{new_note['title']}</b></td></tr>
+                <tr><td style="padding:6px;color:#888">Subject</td><td style="padding:6px">{new_note['subject']}</td></tr>
+                <tr><td style="padding:6px;color:#888">Program</td><td style="padding:6px">{new_note['program']} &mdash; Sem {new_note['semester']}</td></tr>
+                <tr><td style="padding:6px;color:#888">Category</td><td style="padding:6px">{new_note['category']}</td></tr>
+                <tr><td style="padding:6px;color:#888">Submitter</td><td style="padding:6px">{submitter_email}</td></tr>
+              </table>
+              <p style="margin-top:16px">Login to the Admin panel on Mithya to approve or reject this submission.</p>
+            </div>"""
+        )
+
         return jsonify({
-            "success": True, 
-            "message": "Note submitted successfully! Waiting for Admin approval.",
+            "success": True,
+            "message": "Note submitted! You'll get an email once the admin reviews it.",
             "data": new_note
         })
+    except Exception as e:
+        return jsonify({"success": False, "message": str(e)})
+
+
+@app.route('/api/pyqs/<note_id>/star', methods=['POST'])
+@require_auth
+def star_pyq(note_id):
+    """Any logged-in user can give a star to a note with a mandatory reason."""
+    try:
+        data   = request.json or {}
+        reason = data.get('reason', '').strip()
+        if len(reason) < 10:
+            return jsonify({"success": False, "message": "Reason must be at least 10 characters — tell us how it helped!"}), 400
+        if len(reason) > 300:
+            return jsonify({"success": False, "message": "Reason must be under 300 characters"}), 400
+
+        note = pyqs_collection.find_one({"id": note_id, "is_approved": True})
+        if not note:
+            return jsonify({"success": False, "message": "Note not found"}), 404
+
+        star_entry = {
+            "anon_name": request.auth_user.get('anon_name', 'MithyaUser'),
+            "reason":    reason,
+            "timestamp": utcnow()
+        }
+        pyqs_collection.update_one(
+            {"id": note_id},
+            {"$push": {"stars_log": star_entry}, "$inc": {"stars": 1}}
+        )
+        return jsonify({"success": True, "message": "Star given! ⭐"})
     except Exception as e:
         return jsonify({"success": False, "message": str(e)})
 
@@ -664,18 +746,40 @@ def get_pending_pyqs():
 @require_admin
 def moderate_pyq(note_id, action):
     try:
+        note = pyqs_collection.find_one({"id": note_id})
+        if not note:
+            return jsonify({"success": False, "message": "Note not found"}), 404
+
+        submitter_email = note.get('submitter_email', '')
+        title           = note.get('title', 'your note')
+
         if action == 'approve':
-            result = pyqs_collection.update_one({"id": note_id}, {"$set": {"is_approved": True}})
+            result  = pyqs_collection.update_one({"id": note_id}, {"$set": {"is_approved": True}})
             message = "Note approved"
+            send_email(
+                submitter_email,
+                "✅ Your Mithya note is live!",
+                f"""<div style="font-family:sans-serif;max-width:480px">
+                  <h2 style="color:#22c55e">✅ Your note is approved!</h2>
+                  <p>Great news! Your note <b>'{title}'</b> has been reviewed and approved by the admin.</p>
+                  <p>It is now live on <b>Mithya</b> and visible to all students. Thank you for contributing! 🌟</p>
+                </div>"""
+            )
         elif action == 'reject':
-            result = pyqs_collection.delete_one({"id": note_id})
+            result  = pyqs_collection.delete_one({"id": note_id})
             message = "Note rejected and deleted"
+            send_email(
+                submitter_email,
+                "❌ Your Mithya note was not approved",
+                f"""<div style="font-family:sans-serif;max-width:480px">
+                  <h2 style="color:#ef4444">❌ Note not approved</h2>
+                  <p>Unfortunately, your note <b>'{title}'</b> was not approved by the admin.</p>
+                  <p>Please make sure the content is complete, relevant and properly formatted, then feel free to submit again.</p>
+                </div>"""
+            )
         else:
             return jsonify({"success": False, "message": "Invalid action"}), 400
-            
-        if result.modified_count == 0 and getattr(result, 'deleted_count', 0) == 0:
-            return jsonify({"success": False, "message": "Note not found"}), 404
-            
+
         return jsonify({"success": True, "message": message})
     except Exception as e:
         return jsonify({"success": False, "message": str(e)})
@@ -704,6 +808,169 @@ def admin_delete_comment(post_id, comment_id):
         return jsonify({"success": True, "message": "Comment deleted"})
     except Exception as e:
         return jsonify({"success": False, "message": str(e)})
+
+# ==========================================
+# 🏆 LEGEND RESOURCES
+# ==========================================
+
+@app.route('/api/legend', methods=['GET'])
+def get_legend_resources():
+    """Public: fetch all approved legend resources, sorted by stars descending."""
+    try:
+        items = list(legend_collection.find({"is_approved": True}, {"_id": 0}).sort("stars", -1))
+        return jsonify({"success": True, "data": items})
+    except Exception as e:
+        return jsonify({"success": False, "message": str(e)})
+
+
+@app.route('/api/legend', methods=['POST'])
+@require_auth
+def submit_legend_resource():
+    """Auth required: Any student can submit a legend resource. Admin must approve."""
+    try:
+        data = request.json or {}
+        title       = data.get('title', '').strip()
+        drive_link  = data.get('drive_link', '').strip()
+        legend_name = data.get('legend_name', '').strip()
+        subject     = data.get('subject', '').strip()
+
+        if not title or not drive_link or not legend_name or not subject:
+            return jsonify({"success": False, "message": "Title, Drive link, Legend name and Subject are required"}), 400
+
+        submitter_email = request.auth_user.get('email', '')
+        submitter_name  = request.auth_user.get('anon_name', 'AnonymousUser')
+
+        new_resource = {
+            "id":               str(uuid.uuid4()),
+            "title":            title,
+            "drive_link":       drive_link,
+            "description":      data.get('description', '').strip(),
+            "legend_name":      legend_name,
+            "subject":          subject,
+            "program":          data.get('program', 'BTech').strip(),
+            "semester":         data.get('semester', '1').strip(),
+            "submitter_name":   submitter_name,
+            "submitter_email":  submitter_email,
+            "is_approved":      False,
+            "stars":            0,
+            "stars_log":        [],
+            "timestamp":        utcnow()
+        }
+
+        legend_collection.insert_one(new_resource)
+        new_resource.pop('_id', None)
+
+        # Notify admin
+        send_email(
+            ADMIN_EMAIL,
+            f"[Mithya] New Legend Resource Pending: {title}",
+            f"""<div style="font-family:sans-serif;max-width:480px">
+              <h2 style="color:#f59e0b">🏆 New Legend Resource Submission</h2>
+              <p><b>{submitter_name}</b> submitted a Legend Resource for approval:</p>
+              <table style="border-collapse:collapse;width:100%">
+                <tr><td style="padding:6px;color:#888">Title</td><td style="padding:6px"><b>{title}</b></td></tr>
+                <tr><td style="padding:6px;color:#888">Legend</td><td style="padding:6px">{legend_name}</td></tr>
+                <tr><td style="padding:6px;color:#888">Subject</td><td style="padding:6px">{subject}</td></tr>
+                <tr><td style="padding:6px;color:#888">Drive Link</td><td style="padding:6px"><a href="{drive_link}">{drive_link}</a></td></tr>
+                <tr><td style="padding:6px;color:#888">Submitter</td><td style="padding:6px">{submitter_email}</td></tr>
+              </table>
+              <p style="margin-top:16px">Login to the Admin panel on Mithya to approve or reject.</p>
+            </div>"""
+        )
+
+        return jsonify({
+            "success": True,
+            "message": "Legend Resource submitted! You'll be notified once it's reviewed.",
+            "data":    new_resource
+        })
+    except Exception as e:
+        return jsonify({"success": False, "message": str(e)})
+
+
+@app.route('/api/legend/<resource_id>/star', methods=['POST'])
+@require_auth
+def star_legend(resource_id):
+    """Any logged-in user can star a legend resource with a mandatory reason."""
+    try:
+        data   = request.json or {}
+        reason = data.get('reason', '').strip()
+        if len(reason) < 10:
+            return jsonify({"success": False, "message": "Reason must be at least 10 characters — tell us how it helped!"}), 400
+        if len(reason) > 300:
+            return jsonify({"success": False, "message": "Reason must be under 300 characters"}), 400
+
+        resource = legend_collection.find_one({"id": resource_id, "is_approved": True})
+        if not resource:
+            return jsonify({"success": False, "message": "Resource not found"}), 404
+
+        star_entry = {
+            "anon_name": request.auth_user.get('anon_name', 'MithyaUser'),
+            "reason":    reason,
+            "timestamp": utcnow()
+        }
+        legend_collection.update_one(
+            {"id": resource_id},
+            {"$push": {"stars_log": star_entry}, "$inc": {"stars": 1}}
+        )
+        return jsonify({"success": True, "message": "Star given! ⭐"})
+    except Exception as e:
+        return jsonify({"success": False, "message": str(e)})
+
+
+@app.route('/api/admin/pending_legend', methods=['GET'])
+@require_admin
+def get_pending_legend():
+    """Admin: fetch all unapproved legend resource submissions."""
+    try:
+        pending = list(legend_collection.find({"is_approved": False}, {"_id": 0}).sort("timestamp", -1))
+        return jsonify({"success": True, "data": pending})
+    except Exception as e:
+        return jsonify({"success": False, "message": str(e)})
+
+
+@app.route('/api/admin/legend/<resource_id>/<action>', methods=['PUT'])
+@require_admin
+def moderate_legend(resource_id, action):
+    """Admin: approve or reject a legend resource and notify the submitter."""
+    try:
+        resource = legend_collection.find_one({"id": resource_id})
+        if not resource:
+            return jsonify({"success": False, "message": "Resource not found"}), 404
+
+        submitter_email = resource.get('submitter_email', '')
+        title           = resource.get('title', 'your resource')
+
+        if action == 'approve':
+            legend_collection.update_one({"id": resource_id}, {"$set": {"is_approved": True}})
+            message = "Legend Resource approved"
+            send_email(
+                submitter_email,
+                "🏆 Your Legend Resource is live on Mithya!",
+                f"""<div style="font-family:sans-serif;max-width:480px">
+                  <h2 style="color:#f59e0b">🏆 Legend Resource Approved!</h2>
+                  <p>Your submission <b>'{title}'</b> has been approved by the admin.</p>
+                  <p>It is now live in the <b>Legend Resources</b> section of Mithya for all students to access. Amazing contribution! ⭐</p>
+                </div>"""
+            )
+        elif action == 'reject':
+            legend_collection.delete_one({"id": resource_id})
+            message = "Legend Resource rejected and deleted"
+            send_email(
+                submitter_email,
+                "❌ Your Legend Resource was not approved",
+                f"""<div style="font-family:sans-serif;max-width:480px">
+                  <h2 style="color:#ef4444">❌ Legend Resource Not Approved</h2>
+                  <p>Unfortunately, your submission <b>'{title}'</b> was not approved.</p>
+                  <p>Please ensure the Drive link is publicly accessible ("Anyone with link can view") and the content is high quality, then try again.</p>
+                </div>"""
+            )
+        else:
+            return jsonify({"success": False, "message": "Invalid action"}), 400
+
+        return jsonify({"success": True, "message": message})
+    except Exception as e:
+        return jsonify({"success": False, "message": str(e)})
+
 
 # ==========================================
 # 📞 IMPORTANT CONTACTS 
