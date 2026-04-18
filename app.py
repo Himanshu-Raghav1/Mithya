@@ -557,7 +557,9 @@ def get_pyqs():
         if program and program != 'All':
             query['program'] = program
         if semester and semester != 'All':
-            query['semester'] = semester
+            # Use regex so "3" matches notes stored as "3, 4" or "1, 3" etc.
+            # \b ensures "3" doesn't accidentally match "13" or "30"
+            query['semester'] = {'$regex': r'(^|,\s*)' + semester + r'(\s*,|$)', '$options': 'i'}
         if category and category != 'All':
             query['category'] = category
         if search:
