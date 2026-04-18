@@ -2,7 +2,7 @@ import { useState, useRef, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   BookOpen, Upload, Loader2, Link as LinkIcon, Download, Search, X,
-  Lock, Star, Share2, ExternalLink, Trophy, Send
+  Star, Share2, ExternalLink, Trophy, Send
 } from 'lucide-react';
 
 // ─── Star explosion particle animation ───────────────────────────────────────
@@ -482,7 +482,7 @@ function LegendCard({ resource, token, onStar }: { resource: any; token: string 
 
 // ─── Main Component ───────────────────────────────────────────────────────────
 export default function PYQsNotes() {
-  const { user, token } = useAuth();
+  const { token } = useAuth();
   const [showAuth, setShowAuth] = useState(false);
   const [activeTab, setActiveTab] = useState<'feed' | 'legend' | 'upload'>('feed');
 
