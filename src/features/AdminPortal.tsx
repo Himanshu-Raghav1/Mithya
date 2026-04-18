@@ -62,6 +62,7 @@ export default function AdminPortal() {
   const [pinCaption, setPinCaption] = useState('');
   const [isUploadingPin, setIsUploadingPin] = useState(false);
   const pinFileInputRef = useRef<HTMLInputElement>(null);
+  const [pinError, setPinError] = useState('');
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -209,23 +210,36 @@ export default function AdminPortal() {
 
   const handleUploadPin = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!pinImage) return alert("Select an image first!");
-    
+    if (!pinImage) return setPinError('Please select an image first.');
+    setPinError('');
     setIsUploadingPin(true);
     try {
-      const cloudinaryUrl = await uploadToCloudinary(pinImage);
+      // Step 1: upload image to Cloudinary
+      let cloudinaryUrl = '';
+      try {
+        cloudinaryUrl = await uploadToCloudinary(pinImage);
+      } catch (cloudErr: any) {
+        setPinError('Cloudinary upload failed: ' + cloudErr.message);
+        setIsUploadingPin(false);
+        return;
+      }
+
+      // Step 2: save pin to MongoDB via API
       const token = sessionStorage.getItem('admin_token') || '';
       const res = await createPin(cloudinaryUrl, pinCaption, token);
+      console.log('[PinBoard] API response:', res); // debug
+
       if (res.success && res.data) {
          setPins([res.data, ...pins]);
          setPinImage(null);
          setPinCaption('');
+         setPinError('');
          if (pinFileInputRef.current) pinFileInputRef.current.value = '';
       } else {
-         alert("Failed to create pin: " + res.message);
+         setPinError('API error: ' + (res.message || 'Unknown error'));
       }
     } catch (err: any) {
-      alert("Error: " + err.message);
+      setPinError('Unexpected error: ' + err.message);
     } finally {
       setIsUploadingPin(false);
     }
@@ -477,9 +491,20 @@ export default function AdminPortal() {
                <h3 className="font-black text-white mb-3 flex items-center gap-2"><Upload className="w-4 h-4 text-yellow-400"/> Upload to Pin Board</h3>
                <form onSubmit={handleUploadPin} className="space-y-3">
                  <div className="flex items-center gap-4">
-                   <input type="file" accept="image/*" onChange={(e) => setPinImage(e.target.files?.[0] || null)} ref={pinFileInputRef} className="text-sm text-white/70" />
+                   <input
+                     type="file"
+                     accept="image/*"
+                     onChange={(e) => { setPinImage(e.target.files?.[0] || null); setPinError(''); }}
+                     ref={pinFileInputRef}
+                     className="text-sm text-white/70"
+                   />
                  </div>
                  <input value={pinCaption} onChange={e=>setPinCaption(e.target.value)} type="text" placeholder="Caption (optional)" className="w-full bg-black/30 border border-white/10 rounded-lg px-3 py-2 text-sm text-white outline-none focus:border-yellow-400" />
+                 {pinError && (
+                   <div className="text-red-400 text-xs bg-red-500/10 border border-red-500/20 rounded-lg px-3 py-2 font-mono">
+                     ❌ {pinError}
+                   </div>
+                 )}
                  <button type="submit" disabled={isUploadingPin} className="bg-yellow-500 text-black font-bold px-4 py-2 rounded-lg hover:bg-yellow-400 transition-colors flex items-center gap-2 disabled:opacity-50">
                     {isUploadingPin ? <><Loader2 className="w-4 h-4 animate-spin"/> Uploading...</> : <><MapPin className="w-4 h-4"/> Pin to Board</>}
                  </button>

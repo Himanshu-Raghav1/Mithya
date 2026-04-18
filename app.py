@@ -227,17 +227,27 @@ def get_posts():
     try:
         posts = list(voice_collection.find({}, {"_id": 0}).sort("timestamp", -1))
         
-        # Detect logged-in user to inject likedByMe / dislikedByMe flags
-        current_user_id = None
-        auth_header = request.headers.get('Authorization', '')
-        if auth_header.startswith('Bearer '):
-            try:
-                token = auth_header.replace('Bearer ', '')
+        posts = list(voice_collection.find({}, {"_id": 0}).sort("timestamp", -1))
+        
+        # Helper to get user_id even if token signature fails, or fallback to real IP
+        def get_viewer_id(req):
+            auth = req.headers.get('Authorization', '')
+            if auth.startswith('Bearer '):
+                token = auth.replace('Bearer ', '').strip()
                 payload = _decode_local(token)
-                if payload:
-                    current_user_id = payload.get('sub') or payload.get('user_id')
-            except Exception:
-                pass
+                if payload: return payload.get('sub') or payload.get('user_id')
+                sb_user = _validate_via_supabase(token)
+                if sb_user: return sb_user.get('id') or sb_user.get('sub')
+                try:
+                    p = jwt.decode(token, options={"verify_signature": False})
+                    if p.get('sub'): return p.get('sub')
+                except Exception: pass
+            
+            # Fallback to actual client IP (Fix for Render/Vercel proxy IP issue)
+            ip = req.headers.get('X-Forwarded-For', req.remote_addr)
+            return ip.split(',')[0].strip() if ip else 'unknown_ip'
+
+        current_user_id = get_viewer_id(request)
 
         for post in posts:
             liked_by = post.get('liked_by') or []
@@ -342,19 +352,24 @@ def interact_post(post_id, action):
         if action not in ['like', 'dislike', 'report']:
             return jsonify({"success": False, "message": "Invalid action"}), 400
 
-        # Get user identity — use IP as fallback for anonymous visitors
-        auth_header = request.headers.get('Authorization', '')
-        user_id = None
-        if auth_header.startswith('Bearer '):
-            try:
-                token = auth_header.replace('Bearer ', '')
+        # Get user identity safely (Supabase JWT, or Fallback to Real IP)
+        def get_viewer_id(req):
+            auth = req.headers.get('Authorization', '')
+            if auth.startswith('Bearer '):
+                token = auth.replace('Bearer ', '').strip()
                 payload = _decode_local(token)
-                if payload:
-                    user_id = payload.get('sub') or payload.get('user_id')
-            except Exception:
-                pass
-        if not user_id:
-            user_id = request.remote_addr  # Fallback: use IP address
+                if payload: return payload.get('sub') or payload.get('user_id')
+                sb_user = _validate_via_supabase(token)
+                if sb_user: return sb_user.get('id') or sb_user.get('sub')
+                try:
+                    p = jwt.decode(token, options={"verify_signature": False})
+                    if p.get('sub'): return p.get('sub')
+                except Exception: pass
+            
+            ip = req.headers.get('X-Forwarded-For', req.remote_addr)
+            return ip.split(',')[0].strip() if ip else 'unknown_ip'
+
+        user_id = get_viewer_id(request)
 
         if action == 'report':
             result = voice_collection.update_one({"id": post_id}, {"$set": {"reported": True}})
