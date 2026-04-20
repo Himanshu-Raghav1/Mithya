@@ -137,7 +137,12 @@ export default function LostFound() {
       setPreviewUrl(null);
     } catch (err: any) {
       console.error(err);
-      alert("Failed to upload: " + err.message);
+      const isCloudinaryError = err.message && err.message.includes('Cloudinary');
+      if (isCloudinaryError) {
+        alert("🖼️ Cloudinary Error: " + err.message + "\n\nTip: If you're on Vercel, make sure VITE_CLOUDINARY_CLOUD_NAME and VITE_CLOUDINARY_UPLOAD_PRESET are set in Vercel's Environment Variables.");
+      } else {
+        alert("❌ Database Error: " + err.message);
+      }
     } finally {
       setIsUploading(false);
     }
