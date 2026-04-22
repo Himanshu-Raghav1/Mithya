@@ -320,9 +320,18 @@ export async function starNote(noteId: string, reason: string, token: string): P
   }
 }
 
-export async function getLegendResources(): Promise<ApiResponse<any[]>> {
+export async function getLegendResources(
+  program?: string,
+  semester?: string,
+  search?: string
+): Promise<ApiResponse<any[]>> {
   try {
-    const res = await fetch(`${API_BASE_URL}/api/legend`);
+    const params = new URLSearchParams();
+    if (program && program !== 'All') params.append('program', program);
+    if (semester && semester !== 'All') params.append('semester', semester);
+    if (search && search.trim()) params.append('search', search.trim());
+    const query = params.toString() ? `?${params.toString()}` : '';
+    const res = await fetch(`${API_BASE_URL}/api/legend${query}`);
     return await res.json() as ApiResponse<any[]>;
   } catch {
     return { success: false, message: 'Failed to fetch legend resources' };

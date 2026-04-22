@@ -537,10 +537,10 @@ export default function PYQsNotes() {
 
   const loadLegend = useCallback(async () => {
     setIsLegendLoading(true);
-    const res = await getLegendResources();
+    const res = await getLegendResources(selectedProgram, selectedSemester, debouncedSearch);
     setLegendItems(res.success && res.data ? res.data : []);
     setIsLegendLoading(false);
-  }, []);
+  }, [selectedProgram, selectedSemester, debouncedSearch]);
 
   useEffect(() => { if (activeTab === 'feed') loadNotes(); }, [activeTab, loadNotes]);
   useEffect(() => { if (activeTab === 'legend') loadLegend(); }, [activeTab, loadLegend]);
@@ -653,63 +653,73 @@ export default function PYQsNotes() {
         ))}
       </div>
 
-      {/* ══════════════════════════════════════════════════════ */}
-      {/* FEED TAB                                             */}
-      {/* ══════════════════════════════════════════════════════ */}
-      {activeTab === 'feed' && (
-        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-4">
-          {/* Search */}
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-white/40" />
-            <input
-              type="text" value={searchQuery} onChange={e => setSearchQuery(e.target.value)}
-              placeholder="Search by title, subject or author..."
-              className="w-full bg-white/5 border border-white/10 rounded-xl py-2.5 pl-9 pr-10 text-white placeholder-white/30 outline-none focus:border-yellow-400 transition-colors"
-            />
-            {searchQuery && (
-              <button onClick={() => setSearchQuery('')} className="absolute right-3 top-1/2 -translate-y-1/2 text-white/40 hover:text-white">
-                <X className="w-4 h-4" />
-              </button>
-            )}
-          </div>
+      {/* ── SEARCH & FILTERS ── */}
+      <div className="space-y-4">
+        {/* Search */}
+        <div className="relative">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-white/40" />
+          <input
+            type="text" value={searchQuery} onChange={e => setSearchQuery(e.target.value)}
+            placeholder="Search by title, subject or author..."
+            className="w-full bg-white/5 border border-white/10 rounded-xl py-2.5 pl-9 pr-10 text-white placeholder-white/30 outline-none focus:border-yellow-400 transition-colors"
+          />
+          {searchQuery && (
+            <button
+              onClick={() => { setSearchQuery(''); setDebouncedSearch(''); }}
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-white/40 hover:text-white"
+            >
+              <X className="w-4 h-4" />
+            </button>
+          )}
+        </div>
 
-          {/* Filters */}
-          <div className="space-y-3">
-            <div>
-              <p className="text-xs font-bold text-white/40 uppercase tracking-wider mb-2">Program</p>
-              <div className="flex gap-2 overflow-x-auto tab-scroll pb-1">
-                {(['All', ...PROGRAMS] as const).map(p => (
-                  <button key={p} onClick={() => setSelectedProgram(p)}
-                    className={`flex-shrink-0 px-3 py-1.5 rounded-xl text-xs font-bold transition-all border ${selectedProgram === p ? 'bg-yellow-500/20 text-yellow-300 border-yellow-400/40' : 'bg-white/5 text-white/50 border-white/10 hover:text-white/80'}`}>
-                    {p}
-                  </button>
-                ))}
-              </div>
+        {/* Filters */}
+        <div className="space-y-3">
+          <div>
+            <p className="text-xs font-bold text-white/40 uppercase tracking-wider mb-2">Program</p>
+            <div className="flex gap-2 overflow-x-auto tab-scroll pb-1">
+              {(['All', ...PROGRAMS] as const).map(p => (
+                <button key={p} onClick={() => setSelectedProgram(p)}
+                  className={`flex-shrink-0 px-3 py-1.5 rounded-xl text-xs font-bold transition-all border ${selectedProgram === p ? 'bg-yellow-500/20 text-yellow-300 border-yellow-400/40' : 'bg-white/5 text-white/50 border-white/10 hover:text-white/80'}`}>
+                  {p}
+                </button>
+              ))}
             </div>
-            <div>
+          </div>
+          <div className="flex gap-6 flex-wrap">
+            <div className="flex-1 min-w-[140px]">
               <p className="text-xs font-bold text-white/40 uppercase tracking-wider mb-2">Semester</p>
               <div className="flex gap-2 flex-wrap">
                 {(['All', ...SEMESTERS] as const).map(s => (
                   <button key={s} onClick={() => setSelectedSemester(s)}
-                    className={`px-4 py-1.5 rounded-xl text-xs font-bold transition-all border ${selectedSemester === s ? 'bg-blue-500/20 text-blue-300 border-blue-400/40' : 'bg-white/5 text-white/50 border-white/10 hover:text-white/80'}`}>
-                    {s === 'All' ? 'All Sems' : `Sem ${s}`}
+                    className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all border ${selectedSemester === s ? 'bg-blue-500/20 text-blue-300 border-blue-400/40' : 'bg-white/5 text-white/50 border-white/10 hover:text-white/80'}`}>
+                    {s === 'All' ? 'All' : `Sem ${s}`}
                   </button>
                 ))}
               </div>
             </div>
-            <div>
-              <p className="text-xs font-bold text-white/40 uppercase tracking-wider mb-2">Category</p>
-              <div className="flex gap-2 flex-wrap">
-                {(['All', ...CATEGORIES] as const).map(c => (
-                  <button key={c} onClick={() => setSelectedCategory(c)}
-                    className={`px-4 py-1.5 rounded-xl text-xs font-bold transition-all border ${selectedCategory === c ? 'bg-green-500/20 text-green-300 border-green-400/40' : 'bg-white/5 text-white/50 border-white/10 hover:text-white/80'}`}>
-                    {c}
-                  </button>
-                ))}
+            {activeTab === 'feed' && (
+              <div className="flex-1 min-w-[200px]">
+                <p className="text-xs font-bold text-white/40 uppercase tracking-wider mb-2">Category</p>
+                <div className="flex gap-2 flex-wrap">
+                  {(['All', ...CATEGORIES] as const).map(c => (
+                    <button key={c} onClick={() => setSelectedCategory(c)}
+                      className={`px-4 py-1.5 rounded-xl text-xs font-bold transition-all border ${selectedCategory === c ? 'bg-green-500/20 text-green-300 border-green-400/40' : 'bg-white/5 text-white/50 border-white/10 hover:text-white/80'}`}>
+                      {c}
+                    </button>
+                  ))}
+                </div>
               </div>
-            </div>
+            )}
           </div>
+        </div>
+      </div>
 
+      {/* ══════════════════════════════════════════════════════ */}
+      {/* FEED TAB                                             */}
+      {/* ══════════════════════════════════════════════════════ */}
+      {activeTab === 'feed' && (
+        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-4 pt-2">
           {/* Notes grid */}
           {isLoading ? (
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
