@@ -5,7 +5,7 @@ FROM python:3.10-slim
 WORKDIR /app
 
 # Install C++ build dependencies required for compiling some packages
-RUN apt-get update && apt-get install -y build-essential python3-dev gcc g++ && rm -rf /var/lib/apt/lists/*
+RUN apt-get update && apt-get install -y build-essential python3-dev gcc g++ libssl-dev libffi-dev curl && rm -rf /var/lib/apt/lists/*
 
 # Copy requirement list and install dependencies
 COPY requirements.txt .
