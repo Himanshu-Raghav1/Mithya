@@ -4,7 +4,6 @@ import { AnimatePresence, motion } from 'framer-motion';
 import CartoonBackground from './components/CartoonBackground';
 import WelcomeFlow from './components/WelcomeFlow';
 import Navbar from './components/Navbar';
-import LiveSportsSlots from './features/LiveSportsSlots';
 import MITVoice from './features/MITVoice';
 import QuickLinks from './features/QuickLinks';
 import UpcomingEvents from './features/UpcomingEvents';
@@ -23,7 +22,7 @@ export default function App() {
   const getInitialTab = (): TabId => {
     const params = new URLSearchParams(window.location.search);
     const tab = params.get('tab'); // string | null — intentionally not cast to TabId
-    const validTabs: TabId[] = ['sports','voice','events','quicklinks','contacts','lostfound','pyqs','admin','personalized'];
+    const validTabs: TabId[] = ['voice','events','quicklinks','contacts','lostfound','pyqs','admin','personalized','pinboard','qrgen'];
     if (tab === 'legend' || tab === 'pyqs') return 'pyqs';
     return (tab && validTabs.includes(tab as TabId)) ? (tab as TabId) : 'voice';
   };
@@ -38,7 +37,6 @@ export default function App() {
 
   const renderFeature = () => {
     switch (activeTab) {
-      case 'sports':   return <LiveSportsSlots />;
       case 'voice':    return <MITVoice />;
       case 'quicklinks': return <QuickLinks />;
       case 'events':   return <UpcomingEvents />;

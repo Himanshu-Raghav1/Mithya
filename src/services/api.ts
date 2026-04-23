@@ -17,49 +17,8 @@
 // ============================================================
 
 import { API_BASE_URL, API_TIMEOUT_MS } from '../config/api';
-import type { SlotResult, ApiResponse, ForumPost, Comment } from '../types';
+import type { ApiResponse, ForumPost, Comment } from '../types';
 
-/** Search for open sports slots by game name */
-export async function searchSportsSlots(game: string): Promise<ApiResponse<SlotResult[]>> {
-  const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), API_TIMEOUT_MS);
-
-  try {
-    const url = `${API_BASE_URL}/api/search?game=${encodeURIComponent(game.trim())}`;
-    const response = await fetch(url, {
-      method: 'GET',
-      headers: {
-        'Content-Type': 'application/json',
-        'Accept': 'application/json',
-      },
-      signal: controller.signal,
-    });
-
-    clearTimeout(timeoutId);
-
-    if (!response.ok) {
-      return {
-        success: false,
-        message: `Server error: ${response.status} ${response.statusText}`,
-      };
-    }
-
-    const data = await response.json() as ApiResponse<SlotResult[]>;
-    return data;
-  } catch (error) {
-    clearTimeout(timeoutId);
-    if (error instanceof Error && error.name === 'AbortError') {
-      return {
-        success: false,
-        message: 'Request timed out. The server might be busy — please try again.',
-      };
-    }
-    return {
-      success: false,
-      message: 'Could not connect to the server. Make sure the backend is running.',
-    };
-  }
-}
 
 // ==========================================
 // 🗣️ MITVOICE (MONGODB API)

@@ -11,7 +11,6 @@ interface NavbarProps {
 }
 
 const tabs: { id: TabId; label: string; emoji: string }[] = [
-  { id: 'sports', label: 'Live Sports', emoji: '🏆' },
   { id: 'voice', label: 'MITVoice', emoji: '🎙️' },
   { id: 'pyqs', label: 'PYQs & Notes', emoji: '📚' },
   { id: 'lostfound', label: 'Lost & Found', emoji: '🔍' },

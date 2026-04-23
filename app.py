@@ -22,7 +22,6 @@ if not MONGO_URI:
     raise RuntimeError("MONGO_URI environment variable is not set!")
 client = MongoClient(MONGO_URI, maxPoolSize=50, waitQueueTimeoutMS=2500, serverSelectionTimeoutMS=10000, connectTimeoutMS=10000)
 db = client['mithya_sports']
-slots_collection = db['available_slots']
 voice_collection = db['mithya_voice']
 lost_found_collection = db['lost_and_found']
 events_collection = db['mithya_events']
@@ -189,35 +188,6 @@ def require_admin(f):
             return jsonify({"success": False, "message": "Invalid admin token"}), 401
         return f(*args, **kwargs)
     return decorated
-
-# ==========================================
-# 🌐 THE PUBLIC API - LIVE SPORTS
-# ==========================================
-@app.route('/api/search', methods=['GET'])
-def search_game():
-    from datetime import timezone, timedelta
-    IST = timezone(timedelta(hours=5, minutes=30))
-    current_hour = datetime.now(IST).hour
-
-    # 🌙 Updated Night Mode: API is offline only from Midnight to 4:00 AM
-    if 0 <= current_hour < 4:
-        return jsonify({
-            "success": False,
-            "message": "🌙 Slot checking service is offline for the night. Check back at 4:00 AM!"
-        })
-
-    game_query = request.args.get('game', '').lower()
-    
-    if not game_query:
-        return jsonify({"success": False, "message": "Please enter a game name."})
-
-    query = {"game_name": {"$regex": game_query, "$options": "i"}}
-    results = list(slots_collection.find(query, {"_id": 0}))
-
-    if results:
-        return jsonify({"success": True, "data": results})
-    else:
-        return jsonify({"success": False, "message": f"No open slots found for '{game_query}' right now."})
 
 # ==========================================
 # 🗣️ MITVOICE FORUM ENDPOINTS 
