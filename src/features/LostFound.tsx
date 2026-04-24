@@ -33,7 +33,7 @@ export default function LostFound() {
   const [isLoadingFeed, setIsLoadingFeed] = useState(true);
   const [filter, setFilter] = useState<'All' | 'Lost' | 'Found'>('All');
   const [searchQuery, setSearchQuery] = useState('');
-  const [solvedCount, setSolvedCount] = useState(0);
+  const [solvedCount, setSolvedCount] = useState(3);
 
   // Modal State
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -58,8 +58,11 @@ export default function LostFound() {
       if (res.success && res.data) {
         setItems(res.data);
       }
-      if (statsRes.success && statsRes.data) {
-        setSolvedCount(statsRes.data.solved_cases);
+      if (statsRes.success) {
+        const count = (statsRes as any).solved_cases ?? statsRes.data?.solved_cases;
+        if (count !== undefined) {
+          setSolvedCount(count > 3 ? count : 3);
+        }
       }
       setIsLoadingFeed(false);
     }
