@@ -5,6 +5,7 @@ export interface AuthUser {
   user_id: string;
   email: string;
   anon_name: string;
+  needsAnonName: boolean;
 }
 
 interface AuthContextType {
@@ -26,10 +27,19 @@ function decodeJwt(token: string): AuthUser | null {
   try {
     const payload = JSON.parse(atob(token.split('.')[1]));
     if (payload.exp * 1000 < Date.now()) return null;
+    
+    // Get their real name from Google (if any)
+    const realName = payload.user_metadata?.full_name || payload.user_metadata?.name;
+    const currentAnon = payload.user_metadata?.anon_name || payload.anon_name;
+    
+    // Check if anon_name is missing, OR if it accidentally matches their real Google name
+    const hasExplicitAnonName = !!currentAnon && currentAnon !== realName;
+    
     return {
       user_id: payload.sub || payload.user_id,
       email: payload.email || '',
-      anon_name: payload.user_metadata?.anon_name || payload.anon_name || 'MithyaUser'
+      anon_name: hasExplicitAnonName ? currentAnon : 'MithyaUser',
+      needsAnonName: !hasExplicitAnonName
     };
   } catch {
     return null;

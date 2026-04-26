@@ -20,6 +20,22 @@ export async function sendOtp(email: string) {
   }
 }
 
+export async function signInWithGoogle() {
+  try {
+    const { data, error } = await supabase.auth.signInWithOAuth({
+      provider: 'google',
+      options: {
+        // This redirects back to your app after Google login
+        redirectTo: window.location.origin, 
+      }
+    });
+    if (error) return { success: false, message: error.message };
+    return { success: true, url: data.url };
+  } catch (err: any) {
+    return { success: false, message: err.message };
+  }
+}
+
 export async function verifyOtp(email: string, otp: string) {
   try {
     const { data, error } = await supabase.auth.verifyOtp({

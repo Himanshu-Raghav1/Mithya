@@ -130,8 +130,8 @@ export default function PersonalizedSpace() {
     const res = await submitPrivateDeadline(payload, token);
 
     // This perfectly matches the HTTP 403 rule you requested
-    if (!res.success && res.message?.includes('your personal data limit excedded')) {
-      alert("your personal data limit excedded delete previous one");
+    if (!res.success && res.message?.includes('your personal data limit exceeded')) {
+      alert("your personal data limit exceeded delete previous one");
       setIsUploadingDL(false);
       return;
     }

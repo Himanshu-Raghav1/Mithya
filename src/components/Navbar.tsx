@@ -162,7 +162,7 @@ export default function Navbar({ activeTab, onTabChange }: NavbarProps) {
           </div>
         </div>
 
-        {showAuth && <AuthModal onClose={() => setShowAuth(false)} />}
+        {(showAuth || user?.needsAnonName) && <AuthModal onClose={() => setShowAuth(false)} reason={user?.needsAnonName ? "to set up your anonymous identity" : undefined} />}
 
         {/* Tab scroll bar — hidden on mobile (bottom bar takes over) */}
         <div className="hidden sm:flex overflow-x-auto tab-scroll px-2 pb-2 gap-1">

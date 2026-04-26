@@ -9,9 +9,9 @@ def utcnow() -> str:
     return datetime.now(timezone.utc).strftime('%Y-%m-%dT%H:%M:%SZ')
 
 app = Flask(__name__)
-# Allow Authorization header so the frontend can send JWT tokens safely from any Vercel domain
+# Allow Authorization header so the frontend can send JWT tokens safely
 CORS(app, 
-     resources={r"/*": {"origins": "*"}},
+     resources={r"/api/*": {"origins": ["https://mithya.social"]}},
      allow_headers=["*"])
 
 # ==========================================
@@ -47,6 +47,7 @@ user_storage_collection = db['user_storage']
 private_deadlines_collection = db['private_deadlines']
 ur_money_collection = db['ur_money']
 
+ADMIN_USERNAME      = os.environ.get("ADMIN_USERNAME", "Himu")
 ADMIN_PASSWORD      = os.environ.get("ADMIN_PASSWORD") or ""
 SECRET_KEY          = os.environ.get("SECRET_KEY") or ""
 SUPABASE_JWT_SECRET = os.environ.get("SUPABASE_JWT_SECRET") or ""
@@ -79,6 +80,23 @@ def send_email(to: str, subject: str, html: str):
         })
     except Exception:
         pass  # Never crash the route for email failure
+
+# ==========================================
+# 🛡️ INPUT VALIDATION HELPERS
+# ==========================================
+import re
+
+def is_valid_email(email: str) -> bool:
+    pattern = r'^[\w\.-]+@[\w\.-]+\.\w+$'
+    return bool(re.match(pattern, email))
+
+def is_valid_phone(phone: str) -> bool:
+    pattern = r'^\+?[\d\s-]{7,15}$'
+    return bool(re.match(pattern, phone))
+
+def is_valid_url(url: str) -> bool:
+    pattern = r'^https?://[^\s/$.?#].[^\s]*$'
+    return bool(re.match(pattern, url))
 
 # ==========================================
 # 🔐 AUTH CONFIG
@@ -195,8 +213,6 @@ def require_admin(f):
 @app.route('/api/voice/posts', methods=['GET'])
 def get_posts():
     try:
-        posts = list(voice_collection.find({}, {"_id": 0}).sort("timestamp", -1))
-        
         posts = list(voice_collection.find({}, {"_id": 0}).sort("timestamp", -1))
         
         # Helper to get user_id even if token signature fails, or fallback to real IP
@@ -544,7 +560,7 @@ def get_pyqs():
         if semester and semester != 'All':
             # Use regex so "3" matches notes stored as "3, 4" or "1, 3" etc.
             # \b ensures "3" doesn't accidentally match "13" or "30"
-            query['semester'] = {'$regex': r'(^|,\s*)' + semester + r'(\s*,|$)', '$options': 'i'}
+            query['semester'] = {'$regex': r'(^|,\s*)' + re.escape(semester) + r'(\s*,|$)', '$options': 'i'}
         if category and category != 'All':
             query['category'] = category
         if search:
@@ -707,7 +723,18 @@ def verify_admin():
         username = data.get('username', '')
         password = data.get('password', '')
         
-        if username == 'Himu' and password == ADMIN_PASSWORD:
+        # Verify against environment credentials
+        import bcrypt
+        is_valid_pwd = False
+        if ADMIN_PASSWORD:
+            try:
+                # Assuming ADMIN_PASSWORD in env is bcrypt hashed
+                is_valid_pwd = bcrypt.checkpw(password.encode('utf-8'), ADMIN_PASSWORD.encode('utf-8'))
+            except Exception:
+                # Fallback to plain text comparison if not yet hashed in the environment (for backward compatibility)
+                is_valid_pwd = (password == ADMIN_PASSWORD)
+                
+        if username == ADMIN_USERNAME and is_valid_pwd:
             payload = {
                 "user_id": "admin",
                 "role": "admin",
@@ -1030,7 +1057,7 @@ def add_private_deadline():
         
         if (current_used + file_size) > (30 * 1024 * 1024):
             # EXACT MATCH TO USER'S REQUESTED ERROR STRING
-            return jsonify({"success": False, "message": "your personal data limit excedded delete previous one"}), 403
+            return jsonify({"success": False, "message": "your personal data limit exceeded delete previous one"}), 403
             
         # 2. Add the Deadline
         new_dl = {
