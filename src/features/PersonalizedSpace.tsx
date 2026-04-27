@@ -450,7 +450,7 @@ export default function PersonalizedSpace() {
               </div>
               <h3 className="text-2xl font-black text-white tracking-tight mb-2">Coming Soon...</h3>
               <p className="text-white/50 text-sm max-w-xs mx-auto">
-                A dedicated weekly list strictly for skill development! Stay hungry. For now Here is wifi-exam pass- M!TWPU#exam4226, Pls share at your own risk it is changed recently.
+                A dedicated weekly list strictly for skill development! Stay hungry.
               </p>
             </motion.div>
           )}
