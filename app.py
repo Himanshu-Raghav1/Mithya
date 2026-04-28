@@ -70,23 +70,35 @@ if not ADMIN_PASSWORD:
 # ==========================================
 # 📧 RESEND EMAIL HELPER
 # ==========================================
+import threading
+
 def send_email(to: str, subject: str, html: str):
     """
     Fire-and-forget email via Resend using team@mithya.social.
-    Silently fails — email failure must NEVER break the main API flow.
+    Runs in a background thread so it never slows down the API response.
     """
-    try:
-        if not RESEND_API_KEY or not to:
-            return
-        resend.api_key = RESEND_API_KEY
-        resend.Emails.send({
-            "from": f"Mithya <{SENDER_EMAIL}>",
-            "to": [to],
-            "subject": subject,
-            "html": html,
-        })
-    except Exception:
-        pass  # Never crash the route for email failure
+    if not RESEND_API_KEY:
+        print(f"[EMAIL] SKIPPED: RESEND_API_KEY not set. Would have sent to: {to}")
+        return
+    if not to:
+        print("[EMAIL] SKIPPED: No recipient address.")
+        return
+
+    def _send():
+        try:
+            resend.api_key = RESEND_API_KEY
+            result = resend.Emails.send({
+                "from": f"Mithya <{SENDER_EMAIL}>",
+                "to": [to],
+                "subject": subject,
+                "html": html,
+            })
+            print(f"[EMAIL] Sent to {to} | id={result.get('id', 'unknown')}")
+        except Exception as e:
+            # Log the real error — never crashes the route but NOW we can see why
+            print(f"[EMAIL] FAILED to send to {to}: {e}")
+
+    threading.Thread(target=_send, daemon=True).start()
 
 # ==========================================
 # 🛡️ INPUT VALIDATION HELPERS
@@ -228,11 +240,26 @@ def require_admin(f):
 # ==========================================
 # 🗣️ MITVOICE FORUM ENDPOINTS 
 # ==========================================
+@app.route('/api/test-email', methods=['GET'])
+def test_email():
+    """Admin diagnostic: call /api/test-email?to=your@email.com to verify Resend is working."""
+    to = request.args.get('to', ADMIN_EMAIL)
+    if not RESEND_API_KEY:
+        return jsonify({"success": False, "message": "RESEND_API_KEY is not set in environment variables!"})
+    send_email(
+        to,
+        "[Mithya] Test Email",
+        "<h2>Test email from Mithya</h2><p>If you see this, Resend is configured correctly.</p>"
+    )
+    return jsonify({"success": True, "message": f"Test email dispatched to {to}. Check server logs for delivery status."})
+
+
 @app.route('/api/wakeup', methods=['GET'])
 def wakeup_db():
     try:
         db.command("ping")
         _ensure_indexes()  # Create indexes lazily on first wakeup
+
         return jsonify({"success": True, "message": "Database is warm!"})
     except Exception as e:
         return jsonify({"success": False, "message": str(e)})
