@@ -4,6 +4,9 @@ from pymongo import MongoClient
 import uuid, os, jwt, requests as http_requests, resend
 from functools import wraps
 from datetime import datetime, timezone, timedelta
+from dotenv import load_dotenv
+
+load_dotenv()  # ← loads .env for local development; no-op in production
 
 def utcnow() -> str:
     return datetime.now(timezone.utc).strftime('%Y-%m-%dT%H:%M:%SZ')
@@ -11,7 +14,7 @@ def utcnow() -> str:
 app = Flask(__name__)
 # Allow Authorization header so the frontend can send JWT tokens safely
 CORS(app, 
-     resources={r"/api/*": {"origins": ["https://mithya.social"]}},
+     resources={r"/api/*": {"origins": ["https://mithya.social", "http://localhost:5173", "http://127.0.0.1:5173", "https://mithya.vercel.app"]}},
      allow_headers=["*"])
 
 # ==========================================
@@ -20,7 +23,7 @@ CORS(app,
 MONGO_URI = os.environ.get("MONGO_URI", "")
 if not MONGO_URI:
     raise RuntimeError("MONGO_URI environment variable is not set!")
-client = MongoClient(MONGO_URI, maxPoolSize=50, waitQueueTimeoutMS=2500, serverSelectionTimeoutMS=10000, connectTimeoutMS=10000)
+client = MongoClient(MONGO_URI, maxPoolSize=50, waitQueueTimeoutMS=2500, serverSelectionTimeoutMS=15000, connectTimeoutMS=15000)
 db = client['mithya_sports']
 voice_collection = db['mithya_voice']
 lost_found_collection = db['lost_and_found']
@@ -32,20 +35,24 @@ contacts_collection = db['important_contacts']
 users_collection    = db['mithya_users']
 app_stats_collection = db['app_stats']
 
-# Performance Indices (Resolves query slowdowns globally)
-voice_collection.create_index([("timestamp", -1)])
-lost_found_collection.create_index([("timestamp", -1)])
-events_collection.create_index([("date", 1)])
-pyqs_collection.create_index([("timestamp", -1)])
-legend_collection.create_index([("timestamp", -1)])
-pinboard_collection.create_index([("timestamp", -1)])
-private_deadlines_collection = db['private_deadlines']
-private_deadlines_collection.create_index([("date", 1)])
-
 # Personalized Space Collections
 user_storage_collection = db['user_storage']
 private_deadlines_collection = db['private_deadlines']
 ur_money_collection = db['ur_money']
+
+# Performance Indices — created lazily via /api/wakeup, not at startup
+def _ensure_indexes():
+    try:
+        voice_collection.create_index([("timestamp", -1)], background=True)
+        lost_found_collection.create_index([("timestamp", -1)], background=True)
+        events_collection.create_index([("date", 1)], background=True)
+        pyqs_collection.create_index([("timestamp", -1)], background=True)
+        legend_collection.create_index([("timestamp", -1)], background=True)
+        pinboard_collection.create_index([("timestamp", -1)], background=True)
+        private_deadlines_collection.create_index([("date", 1)], background=True)
+    except Exception:
+        pass  # Never block startup for index creation
+
 
 ADMIN_USERNAME      = os.environ.get("ADMIN_USERNAME", "Himu")
 ADMIN_PASSWORD      = os.environ.get("ADMIN_PASSWORD") or ""
@@ -107,52 +114,63 @@ SUPABASE_ANON_KEY = os.environ.get("SUPABASE_ANON_KEY", "")  # public anon key
 import base64 as _base64
 
 # ────────────────────────────────────────────────────────────────
-# Supabase REST user-info lookup (primary — works without JWT secret)
+# Supabase JWT local validation — FAST, no network call needed
+# Falls back to REST API only if JWT secret is not configured
 # ────────────────────────────────────────────────────────────────
 def _validate_via_supabase(token: str) -> dict | None:
     """
-    Ask Supabase /auth/v1/user if the token is valid.
-    Returns user dict on success, None on any failure.
-    Requires SUPABASE_URL and SUPABASE_ANON_KEY env vars.
+    Verify Supabase JWT locally. Supabase signs with a base64url secret.
+    Only falls back to the slow REST API if SUPABASE_JWT_SECRET is not set.
     """
+    if SUPABASE_JWT_SECRET:
+        secrets_to_try = [SUPABASE_JWT_SECRET]  # raw string first
+        try:
+            import base64 as _b64
+            padded = SUPABASE_JWT_SECRET + '=' * (-len(SUPABASE_JWT_SECRET) % 4)
+            secrets_to_try.insert(0, _b64.urlsafe_b64decode(padded))  # base64 bytes — most common
+        except Exception:
+            pass
+
+        for secret in secrets_to_try:
+            try:
+                payload = jwt.decode(token, secret, algorithms=["HS256"], options={"verify_aud": False})
+                user_meta = payload.get('user_metadata', {})
+                return {
+                    'id': payload.get('sub'),
+                    'email': payload.get('email', '') or user_meta.get('email', ''),
+                    'user_metadata': user_meta,
+                }
+            except jwt.ExpiredSignatureError:
+                raise  # Always propagate expiry
+            except jwt.InvalidTokenError:
+                continue
+
+    # Slow path: REST API fallback (only used if JWT secret is not set in env)
     if not SUPABASE_URL or not SUPABASE_ANON_KEY:
         return None
     try:
         res = http_requests.get(
             f"{SUPABASE_URL}/auth/v1/user",
-            headers={
-                "Authorization": f"Bearer {token}",
-                "apikey": SUPABASE_ANON_KEY,
-            },
+            headers={"Authorization": f"Bearer {token}", "apikey": SUPABASE_ANON_KEY},
             timeout=8,
         )
         if res.status_code == 200:
-            return res.json()  # Supabase user object
+            return res.json()
     except Exception:
         pass
     return None
 
 # ────────────────────────────────────────────────────────────────
-# Local JWT decode fallback (for auth_service.py issued tokens)
+# Local JWT decode fallback (for custom auth_service.py tokens)
 # ────────────────────────────────────────────────────────────────
 def _decode_local(token: str) -> dict | None:
-    secrets = [SECRET_KEY]
-    supabase_secret = os.environ.get("SUPABASE_JWT_SECRET", "")
-    if supabase_secret:
-        secrets.insert(0, supabase_secret)
-        try:
-            padded = supabase_secret + '=' * (-len(supabase_secret) % 4)
-            secrets.insert(1, _base64.urlsafe_b64decode(padded))
-        except Exception:
-            pass
-    for secret in secrets:
-        try:
-            return jwt.decode(token, secret, algorithms=["HS256"], options={"verify_aud": False})
-        except jwt.ExpiredSignatureError:
-            raise
-        except jwt.InvalidTokenError:
-            continue
-    return None
+    """Decode a locally-issued JWT (signed with SECRET_KEY)."""
+    try:
+        return jwt.decode(token, SECRET_KEY, algorithms=["HS256"], options={"verify_aud": False})
+    except jwt.ExpiredSignatureError:
+        raise
+    except jwt.InvalidTokenError:
+        return None
 
 def require_auth(f):
     @wraps(f)
@@ -210,6 +228,15 @@ def require_admin(f):
 # ==========================================
 # 🗣️ MITVOICE FORUM ENDPOINTS 
 # ==========================================
+@app.route('/api/wakeup', methods=['GET'])
+def wakeup_db():
+    try:
+        db.command("ping")
+        _ensure_indexes()  # Create indexes lazily on first wakeup
+        return jsonify({"success": True, "message": "Database is warm!"})
+    except Exception as e:
+        return jsonify({"success": False, "message": str(e)})
+
 @app.route('/api/voice/posts', methods=['GET'])
 def get_posts():
     try:
@@ -433,7 +460,7 @@ def create_lost_found_item():
             "item_name": data.get('item_name').strip(),
             "description": data.get('description', '').strip(),
             "contact_name": data.get('contact_name').strip(),
-            "phone_number": data.get('phone_number').strip(),
+            "phone_number": (data.get('phone_number') or '').strip(),
             "type": data.get('type', 'Lost'),
             "image_url": data.get('image_url'),
             "auth_uid": request.auth_user.get('user_id'),
@@ -1150,7 +1177,7 @@ def add_expense():
 
 if __name__ == '__main__':
     print("==========================================")
-    print("   🚀 MITHYA API SERVER IS LIVE! ")
+    print("   MITHYA API SERVER IS LIVE! ")
     print("==========================================")
     port = int(os.environ.get("PORT", 5000))
     app.run(host="0.0.0.0", port=port, debug=False)

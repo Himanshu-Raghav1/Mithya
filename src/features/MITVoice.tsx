@@ -83,18 +83,34 @@ export default function MITVoice() {
     if (res.success && res.data) {
       setPosts(res.data);
       setFetchError(null);
+      setLoading(false);
+      if (isRefresh) setIsRefreshing(false);
+      return true;
     } else if (!res.success) {
       setFetchError(res.message || 'Something went wrong');
     }
     setLoading(false);
     if (isRefresh) setIsRefreshing(false);
+    return false;
   };
 
   useEffect(() => {
-    if (!authLoading) {
-      loadPosts();
-    }
+    if (authLoading) return; // Wait for Supabase session check to finish
+
+    // Fire the first attempt immediately
+    loadPosts().then((success) => {
+      if (!success) {
+        // Auto-retry once after 8s — gives the backend time to wake up
+        // The wakeup ping in main.tsx runs in parallel; by 8s the server should be warm
+        setTimeout(() => {
+          setLoading(true);
+          setFetchError(null);
+          loadPosts();
+        }, 8000);
+      }
+    });
   }, [authLoading, token]);
+
 
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
