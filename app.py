@@ -363,7 +363,10 @@ def add_comment(post_id):
         updated = sorted(recent + [utcnow()])[-20:]
         users_collection.update_one(
             {"id": user_id},
-            {"$set": {"comment_timestamps": updated}},
+            {"$set": {
+                "id": user_id,               # ensure field exists on insert
+                "comment_timestamps": updated
+            }},
             upsert=True
         )
 
